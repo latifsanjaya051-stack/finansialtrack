@@ -1,0 +1,2246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pencatat Keuangan & Laba Rugi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' };</script>
+    <script>
+        (function() {
+            try {
+                var t = localStorage.getItem('ft_theme');
+                if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                if (t === 'dark') document.documentElement.classList.add('dark');
+            } catch(e) {}
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --indigo: #6366f1;
+            --indigo-dark: #4f46e5;
+        }
+
+        /* Smooth scrolling & selection */
+        html { scroll-behavior: smooth; }
+        ::selection { background: rgba(99,102,241,.25); }
+
+        body {
+            background:
+                radial-gradient(1200px 600px at 100% -10%, rgba(99,102,241,.12), transparent 60%),
+                radial-gradient(1000px 500px at -10% 110%, rgba(16,185,129,.10), transparent 55%),
+                #f1f5f9;
+        }
+
+        /* ===== Dark mode ===== */
+        html.dark body {
+            background:
+                radial-gradient(1200px 600px at 100% -10%, rgba(99,102,241,.18), transparent 60%),
+                radial-gradient(1000px 500px at -10% 110%, rgba(16,185,129,.14), transparent 55%),
+                #0f172a;
+            color: #e2e8f0;
+        }
+
+        /* Override Tailwind utility colors in dark mode */
+        html.dark .bg-white\/80 { background-color: rgba(30,41,59,.85) !important; }
+        html.dark .bg-white { background-color: #1e293b !important; }
+        html.dark .bg-slate-50,
+        html.dark .bg-slate-50\/80 { background-color: #1e293b !important; }
+        html.dark .bg-slate-100 { background-color: #334155 !important; }
+        html.dark .bg-slate-900\/40 { background-color: rgba(2,6,23,.6) !important; }
+        html.dark .bg-indigo-50 { background-color: rgba(49,46,129,.35) !important; }
+        html.dark .bg-emerald-50 { background-color: rgba(6,78,59,.35) !important; }
+        html.dark .bg-rose-50 { background-color: rgba(159,18,57,.30) !important; }
+
+        html.dark .text-slate-800 { color: #e2e8f0 !important; }
+        html.dark .text-slate-700 { color: #cbd5e1 !important; }
+        html.dark .text-slate-600 { color: #cbd5e1 !important; }
+        html.dark .text-slate-500 { color: #94a3b8 !important; }
+        html.dark .text-slate-400 { color: #94a3b8 !important; }
+        html.dark .text-slate-300 { color: #cbd5e1 !important; }
+
+        html.dark .border-slate-200,
+        html.dark .border-slate-100,
+        html.dark .border-slate-300 { border-color: #334155 !important; }
+        html.dark .divide-slate-100 > *,
+        html.dark .divide-slate-200 > * { border-color: #334155 !important; }
+
+        html.dark .hover\:bg-slate-50:hover { background-color: #334155 !important; }
+        html.dark .hover\:bg-slate-100:hover { background-color: #475569 !important; }
+        html.dark .hover\:bg-slate-200:hover { background-color: #475569 !important; }
+
+        html.dark .seg-btn.active-in,
+        html.dark .seg-btn.active-out { background: #1e293b !important; }
+
+        /* Custom component styles */
+        html.dark .seg { background: #1e293b; }
+        html.dark .float-field input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+        html.dark .float-field input:focus { background: #1e293b; }
+        html.dark .float-field label { color: #64748b; }
+        html.dark .profile-btn { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+        html.dark .profile-menu { background: #1e293b; border-color: #334155; }
+        html.dark .profile-menu .pm-head { border-color: #334155; }
+        html.dark .pm-item { color: #cbd5e1; }
+        html.dark .pm-item:hover { background: #334155; }
+        html.dark .pm-item.danger { color: #fb7185; }
+        html.dark .pm-item.danger:hover { background: #3f1d2b; }
+        html.dark #scan-drop { border-color: #334155; }
+        html.dark #scan-drop:hover { border-color: #818cf8; background: rgba(99,102,241,.1); }
+        html.dark .toast-in { background: #1e293b !important; color: #e2e8f0 !important; }
+        html.dark .stat-card::after { background: linear-gradient(135deg, rgba(255,255,255,.06), transparent 45%); }
+        html.dark .field:focus { background: #1e293b; }
+        html.dark ::-webkit-scrollbar-thumb { background: #475569; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px; border-radius: 999px;
+            background: #fff; border: 1px solid #e2e8f0; color: #475569;
+            cursor: pointer; transition: box-shadow .2s ease, transform .15s ease, background .2s ease, color .2s ease;
+        }
+        .theme-toggle:hover { box-shadow: 0 6px 16px -6px rgba(15,23,42,.3); transform: translateY(-1px); }
+        html.dark .theme-toggle { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+
+        /* Floating active users badge (top-left) */
+        .active-users {
+            position: fixed;
+            top: 16px; left: 16px;
+            z-index: 45;
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid #e2e8f0;
+            padding: 7px 13px 7px 11px; border-radius: 999px;
+            font-size: .78rem; font-weight: 600; color: #475569;
+            box-shadow: 0 8px 22px -10px rgba(15,23,42,.35);
+            cursor: default; user-select: none;
+            transition: background .2s ease, color .2s ease, border-color .2s ease;
+        }
+        .active-users .au-dot {
+            position: relative; width: 9px; height: 9px; border-radius: 999px;
+            background: #10b981; flex-shrink: 0;
+        }
+        .active-users .au-dot::after {
+            content: ""; position: absolute; inset: 0; border-radius: 999px;
+            background: #10b981; animation: auPing 1.6s cubic-bezier(0,0,.2,1) infinite;
+        }
+        @keyframes auPing {
+            0%   { transform: scale(1); opacity: .7; }
+            75%, 100% { transform: scale(2.6); opacity: 0; }
+        }
+        .active-users .au-count { color: #0f172a; font-weight: 700; }
+        html.dark .active-users { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+        html.dark .active-users .au-count { color: #f1f5f9; }
+
+        /* Animated gradient header text */
+        .gradient-text {
+            background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981, #4f46e5);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: shimmer 8s ease infinite;
+        }
+        @keyframes shimmer {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Card hover lift */
+        .lift {
+            transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease;
+        }
+        .lift:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 18px 40px -12px rgba(15,23,42,.25);
+        }
+
+        /* Pulse ring on the profit box when it changes */
+        @keyframes pulseRing {
+            0%   { box-shadow: 0 0 0 0 rgba(99,102,241,.45); }
+            70%  { box-shadow: 0 0 0 14px rgba(99,102,241,0); }
+            100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+        }
+        .pulse { animation: pulseRing .7s ease-out; }
+
+        /* Entrance animation for table rows */
+        @keyframes rowIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .row-in { animation: rowIn .35s ease both; }
+
+        /* Toast */
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(40px) scale(.96); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes toastOut {
+            to { opacity: 0; transform: translateX(40px) scale(.96); }
+        }
+        .toast-in  { animation: toastIn .3s cubic-bezier(.2,.8,.2,1) both; }
+        .toast-out { animation: toastOut .3s ease forwards; }
+
+        /* Floating label focus */
+        .field {
+            transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+        }
+        .field:focus {
+            border-color: var(--indigo);
+            box-shadow: 0 0 0 4px rgba(99,102,241,.15);
+            background: #fff;
+        }
+
+        /* Button press */
+        .btn-press:active { transform: scale(.97); }
+
+        /* Floating entrance */
+        .fade-in { animation: fadeIn .4s ease both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Scroll reveal: state awal tersembunyi, muncul saat masuk viewport */
+        .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity .6s ease-out, transform .6s ease-out;
+            will-change: opacity, transform;
+        }
+        .reveal.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { height: 8px; width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Segmented type toggle */
+        .seg {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .seg-btn {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: .875rem;
+            color: #64748b;
+            cursor: pointer;
+            min-width: 0;
+            white-space: nowrap;
+            transition: color .25s ease, transform .15s ease, box-shadow .25s ease;
+            user-select: none;
+        }
+        .seg-btn:hover { transform: translateY(-1px); }
+        .seg-btn.active-in  { color: #047857; background: #fff; box-shadow: 0 2px 8px -2px rgba(16,185,129,.45); }
+        .seg-btn.active-out { color: #e11d48; background: #fff; box-shadow: 0 2px 8px -2px rgba(244,63,94,.45); }
+        .seg-btn .dot {
+            width: 8px; height: 8px; border-radius: 999px;
+            background: currentColor; opacity: .55;
+        }
+        .seg-btn.active-in .dot, .seg-btn.active-out .dot { opacity: 1; }
+
+        /* Floating label fields */
+        .float-field { position: relative; }
+        .float-field input {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 22px 14px 8px 42px;
+            font-size: .95rem;
+            color: #0f172a;
+            transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+        }
+        .float-field input:focus {
+            outline: none;
+            border-color: var(--indigo);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(99,102,241,.15);
+        }
+        .float-field label {
+            position: absolute;
+            left: 42px;
+            top: 15px;
+            font-size: .95rem;
+            color: #94a3b8;
+            pointer-events: none;
+            transition: all .18s ease;
+        }
+        .float-field input:focus + label,
+        .float-field input:not(:placeholder-shown) + label,
+        .float-field input.filled + label {
+            top: 7px;
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+            color: var(--indigo);
+        }
+        .float-field .lead-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: .85rem;
+            transition: color .2s ease;
+        }
+        .float-field input:focus ~ .lead-icon { color: var(--indigo); }
+
+        /* Refined income / expense stat cards */
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,.55), transparent 45%);
+            pointer-events: none;
+        }
+        .stat-icon {
+            width: 52px; height: 52px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 16px;
+            font-size: 1.25rem;
+            box-shadow: 0 8px 20px -8px rgba(15,23,42,.35);
+        }
+        .stat-icon.in  { background: linear-gradient(135deg, #34d399, #059669); color: #fff; }
+        .stat-icon.out { background: linear-gradient(135deg, #fb7185, #e11d48); color: #fff; }
+        .stat-sub {
+            font-size: .7rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* Profile area */
+        .profile-wrap { position: relative; }
+        .avatar {
+            width: 40px; height: 40px;
+            border-radius: 999px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; color: #fff;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            box-shadow: 0 4px 12px -4px rgba(99,102,241,.6);
+            cursor: pointer;
+            overflow: hidden;
+            border: 2px solid #fff;
+        }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid #e2e8f0;
+            padding: 8px 14px 8px 10px; border-radius: 999px;
+            font-weight: 600; font-size: .85rem; color: #334155;
+            cursor: pointer; transition: box-shadow .2s ease, transform .15s ease;
+        }
+        .profile-btn:hover { box-shadow: 0 6px 16px -6px rgba(15,23,42,.3); transform: translateY(-1px); }
+        .profile-btn .g-ico {
+            width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+            background: #fff; border-radius: 999px;
+        }
+        .profile-menu {
+            position: absolute; right: 0;
+            width: 220px; background: #fff; border: 1px solid #e2e8f0;
+            border-radius: 16px; box-shadow: 0 18px 40px -12px rgba(15,23,42,.3);
+            padding: 10px; z-index: 40;
+            transform-origin: top right;
+        }
+        /* Desktop: dropdown di bawah avatar */
+        @media (min-width: 640px) {
+            .profile-menu { top: calc(100% + 10px); }
+        }
+        .profile-menu.hidden { display: none; }
+        .profile-menu .pm-head {
+            display: flex; align-items: center; gap: 10px; padding: 8px;
+            border-bottom: 1px solid #f1f5f9; margin-bottom: 6px;
+        }
+        .profile-menu .pm-name { font-weight: 700; font-size: .9rem; color: #0f172a; }
+        .profile-menu .pm-email { font-size: .72rem; color: #94a3b8; }
+        .pm-item {
+            width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;
+            padding: 9px 10px; border-radius: 10px; font-size: .85rem; color: #475569;
+            cursor: pointer; transition: background .15s ease;
+        }
+        .pm-item:hover { background: #f8fafc; }
+        .pm-item.danger { color: #e11d48; }
+        .pm-item.danger:hover { background: #fef2f2; }
+
+        /* Scan struk button */
+        .scan-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            color: #fff; font-weight: 600; font-size: .8rem;
+            padding: 8px 12px; border-radius: 999px; cursor: pointer;
+            box-shadow: 0 6px 16px -6px rgba(99,102,241,.6);
+            transition: transform .15s ease, box-shadow .2s ease;
+        }
+        .scan-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px rgba(99,102,241,.7); }
+        .scan-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+        /* Backdrop for mobile bottom-sheet */
+        #menu-backdrop { background: rgba(15,23,42,.35); backdrop-filter: blur(2px); }
+
+        /* On phones: turn the dropdown into a bottom sheet (via .sheet class) */
+        .profile-menu.sheet {
+            position: fixed;
+            top: auto;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            border-radius: 22px 22px 0 0;
+            box-shadow: 0 -12px 40px -12px rgba(15,23,42,.45);
+            padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+            animation: sheetUp .25s ease both;
+        }
+        @keyframes sheetUp {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+        }
+        @media (max-width: 639px) {
+            .pm-head { padding: 10px 6px 12px; }
+            .pm-item { padding: 14px 12px; font-size: .95rem; }
+        }
+
+        /* ===== Welcome overlay ===== */
+        #welcome-overlay {
+            position: fixed; inset: 0; z-index: 80;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.25rem;
+            background: rgba(15,23,42,.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            opacity: 0; visibility: hidden;
+            transition: opacity .4s ease, visibility .4s ease;
+        }
+        #welcome-overlay.show { opacity: 1; visibility: visible; }
+        #welcome-overlay.hide { opacity: 0; visibility: hidden; }
+
+        .welcome-card {
+            position: relative;
+            width: 100%; max-width: 440px;
+            background: #fff;
+            border-radius: 24px;
+            padding: 2.25rem 1.75rem 1.75rem;
+            text-align: center;
+            box-shadow: 0 30px 70px -20px rgba(15,23,42,.5);
+            transform: translateY(24px) scale(.96);
+            opacity: 0;
+            transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .5s ease;
+        }
+        #welcome-overlay.show .welcome-card { transform: translateY(0) scale(1); opacity: 1; }
+
+        .welcome-glow {
+            position: absolute; inset: 0; border-radius: 24px; overflow: hidden; pointer-events: none;
+        }
+        .welcome-glow::before {
+            content: ""; position: absolute; top: -40%; left: -10%;
+            width: 120%; height: 80%;
+            background: radial-gradient(closest-side, rgba(99,102,241,.18), transparent);
+        }
+        .welcome-badge {
+            width: 76px; height: 76px; margin: 0 auto 1rem;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 22px; font-size: 2rem; color: #fff;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            box-shadow: 0 14px 30px -10px rgba(99,102,241,.7);
+            animation: welcomePop .6s cubic-bezier(.2,.8,.2,1) both;
+        }
+        @keyframes welcomePop {
+            from { transform: scale(.4) rotate(-12deg); opacity: 0; }
+            to   { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        .welcome-title {
+            background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981, #4f46e5);
+            background-size: 300% 100%;
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            animation: shimmer 8s ease infinite;
+            font-size: 1.5rem; font-weight: 800; letter-spacing: -.02em;
+        }
+        .welcome-features { display: grid; gap: .6rem; margin: 1.25rem 0 1.5rem; text-align: left; }
+        .welcome-feature {
+            display: flex; align-items: center; gap: .7rem;
+            background: #f8fafc; border: 1px solid #eef2f7;
+            padding: .65rem .85rem; border-radius: 14px; font-size: .85rem; color: #475569;
+        }
+        .welcome-feature i { color: #6366f1; width: 18px; text-align: center; }
+        .welcome-enter {
+            width: 100%; padding: .85rem; border-radius: 14px; border: none; cursor: pointer;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff;
+            font-weight: 700; font-size: .95rem;
+            box-shadow: 0 12px 26px -10px rgba(99,102,241,.7);
+            transition: transform .15s ease, box-shadow .2s ease;
+        }
+        .welcome-enter:hover { transform: translateY(-1px); box-shadow: 0 16px 32px -10px rgba(99,102,241,.8); }
+        .welcome-enter:active { transform: scale(.98); }
+        .welcome-skip {
+            margin-top: .85rem; background: none; border: none; cursor: pointer;
+            color: #94a3b8; font-size: .8rem; font-weight: 600;
+        }
+        .welcome-skip:hover { color: #64748b; }
+
+        html.dark #welcome-overlay { background: rgba(2,6,23,.7); }
+        html.dark .welcome-card { background: #1e293b; box-shadow: 0 30px 70px -20px rgba(0,0,0,.7); }
+        html.dark .welcome-feature { background: #0f172a; border-color: #334155; color: #cbd5e1; }
+        html.dark .welcome-skip { color: #64748b; }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen text-slate-800">
+
+    <!-- Welcome overlay -->
+    <div id="welcome-overlay" role="dialog" aria-modal="true" aria-label="Selamat datang">
+        <div class="welcome-card">
+            <div class="welcome-glow"></div>
+            <div class="welcome-badge"><i class="fa-solid fa-wallet"></i></div>
+            <h2 class="welcome-title">Finansial Track</h2>
+            <p class="text-sm text-slate-500 mt-2">Selamat datang! Kelola keuangan &amp; produktivitas harian Anda dalam satu tempat.</p>
+
+            <div class="welcome-features">
+                <div class="welcome-feature"><i class="fa-solid fa-arrow-trend-up"></i> Catat pemasukan &amp; pengeluaran, pantau laba rugi</div>
+                <div class="welcome-feature"><i class="fa-solid fa-fire"></i> Hitung kebutuhan kalori harian (BMR &amp; TDEE)</div>
+                <div class="welcome-feature"><i class="fa-solid fa-note-sticky"></i> Notepad harian &amp; kalkulator tabungan</div>
+            </div>
+
+            <button class="welcome-enter" id="welcome-enter">Mulai Gunakan</button>
+            <button class="welcome-skip" id="welcome-skip">Lewati</button>
+        </div>
+    </div>
+
+    <!-- Floating active users (top-left) -->
+    <div class="active-users" id="active-users" title="Pengguna yang sedang aktif">
+        <span class="au-dot"></span>
+        <span><span class="au-count" id="au-count">1</span> online</span>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-3 w-[calc(100%-2rem)] sm:left-auto sm:right-5 sm:w-72"></div>
+
+    <div class="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
+        <!-- Profile (top-right) -->
+        <div class="flex justify-end items-center gap-3 mb-4">
+            <button id="theme-toggle" type="button" class="theme-toggle" title="Ganti tema (terang/gelap)">
+                <i class="fa-solid fa-moon" id="theme-icon"></i>
+            </button>
+            <div class="profile-wrap" id="profile-wrap">
+                <!-- Logged out: Google login button -->
+                <button class="profile-btn" id="login-btn">
+                    <span class="g-ico">
+                        <svg viewBox="0 0 48 48" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        </svg>
+                    </span>
+                    Masuk dengan Google
+                </button>
+
+                <!-- Logged in: avatar + dropdown -->
+                <div id="profile-logged" class="hidden items-center gap-2">
+                    <div class="avatar" id="avatar-btn"></div>
+                    <div class="profile-menu hidden" id="profile-menu">
+                        <div class="pm-head">
+                            <div class="avatar" id="menu-avatar" style="width:36px;height:36px;"></div>
+                            <div class="min-w-0">
+                                <div class="pm-name truncate" id="pm-name">Pengguna</div>
+                                <div class="pm-email truncate" id="pm-email">—</div>
+                            </div>
+                        </div>
+                        <button class="pm-item" id="pm-edit"><i class="fa-solid fa-user-pen"></i> Edit Profil</button>
+                        <button class="pm-item" id="pm-sync"><i class="fa-solid fa-rotate"></i> Sinkronkan Data</button>
+                        <button class="pm-item danger" id="pm-logout"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backdrop untuk bottom-sheet profil (mobile) -->
+        <div id="menu-backdrop" class="fixed inset-0 z-30 hidden"></div>
+
+        <!-- Modal Edit Profil -->
+        <div id="profile-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
+            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-user-pen mr-2 text-indigo-600"></i>Edit Profil</h3>
+                    <button id="pm-close" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="flex flex-col items-center mb-5">
+                    <div class="avatar" id="modal-avatar" style="width:72px;height:72px;font-size:1.5rem;"></div>
+                    <label class="mt-3 cursor-pointer text-xs font-semibold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1">
+                        <i class="fa-solid fa-camera"></i> Ubah Foto
+                        <input type="file" id="pm-photo" accept="image/*" class="hidden">
+                    </label>
+                </div>
+
+                <div class="float-field mb-5">
+                    <input type="text" id="pm-name-input" placeholder=" " required>
+                    <label for="pm-name-input">Nama Lengkap</label>
+                    <i class="fa-solid fa-signature lead-icon"></i>
+                </div>
+
+                <div class="flex gap-3">
+                    <button id="pm-cancel" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition">Batal</button>
+                    <button id="pm-save" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold hover:from-indigo-700 hover:to-violet-700 transition">Simpan</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Scan Struk -->
+        <div id="scan-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-camera-retro mr-2 text-sky-500"></i>Scan Struk</h3>
+                    <button id="scan-close" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <input type="file" id="scan-file" accept="image/*" capture="environment" class="hidden">
+
+                <!-- Tab: Unggah / Kamera -->
+                <div class="seg mb-4" id="scan-tab">
+                    <div class="seg-btn active-in" data-tab="upload">
+                        <i class="fa-solid fa-image"></i> Unggah Foto
+                    </div>
+                    <div class="seg-btn" data-tab="camera">
+                        <i class="fa-solid fa-camera"></i> Kamera
+                    </div>
+                </div>
+
+                <!-- Panel Unggah -->
+                <div id="scan-upload-panel">
+                    <div id="scan-drop" class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40 transition">
+                        <i class="fa-solid fa-image text-3xl text-slate-300 mb-2"></i>
+                        <p class="text-sm text-slate-500">Klik untuk pilih foto struk<br><span class="text-xs text-slate-400">OCR akan membaca nominal & keterangan otomatis</span></p>
+                    </div>
+                </div>
+
+                <!-- Panel Kamera -->
+                <div id="scan-camera-panel" class="hidden">
+                    <div class="relative rounded-xl overflow-hidden bg-slate-900 aspect-[4/3] flex items-center justify-center">
+                        <video id="scan-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+                        <div id="scan-cam-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-center px-4">
+                            <i class="fa-solid fa-camera text-3xl mb-2"></i>
+                            <p class="text-sm">Klik "Buka Kamera" lalu arahkan ke struk</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button id="scan-cam-start" class="flex-1 bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold py-2.5 rounded-xl hover:from-sky-600 hover:to-indigo-600 transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-video"></i> Buka Kamera
+                        </button>
+                        <button id="scan-cam-capture" class="flex-1 bg-emerald-600 text-white font-semibold py-2.5 rounded-xl hover:bg-emerald-700 transition flex items-center justify-center gap-2 hidden">
+                            <i class="fa-solid fa-circle"></i> Ambil Foto
+                        </button>
+                    </div>
+                    <p id="scan-cam-error" class="text-xs text-rose-500 mt-2 hidden text-center"></p>
+                </div>
+
+                <div id="scan-preview-wrap" class="hidden mt-4">
+                    <img id="scan-preview" class="w-full rounded-xl border border-slate-200" alt="Preview struk">
+                </div>
+
+                <div id="scan-progress-wrap" class="hidden mt-4">
+                    <div class="flex justify-between text-xs text-slate-500 mb-1">
+                        <span id="scan-status">Memproses…</span>
+                        <span id="scan-pct">0%</span>
+                    </div>
+                    <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div id="scan-bar" class="h-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-200" style="width:0%"></div>
+                    </div>
+                </div>
+
+                <div id="scan-result" class="hidden mt-4 space-y-3">
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Teks Terdeteksi (OCR)</p>
+                        <p id="scan-raw" class="text-xs text-slate-500 max-h-24 overflow-y-auto whitespace-pre-wrap"></p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Jenis</label>
+                            <select id="scan-type" class="w-full rounded-lg border-slate-200 border p-2 text-sm bg-slate-50">
+                                <option value="pengeluaran">Pengeluaran (-)</option>
+                                <option value="pemasukan">Pemasukan (+)</option>
+                            </select>
+                        </div>
+                        <div class="float-field">
+                            <input type="text" id="scan-amount" placeholder=" " inputmode="numeric">
+                            <label for="scan-amount">Jumlah (Rp)</label>
+                            <i class="fa-solid fa-rupiah-sign lead-icon"></i>
+                        </div>
+                    </div>
+                    <div class="float-field">
+                        <input type="text" id="scan-desc" placeholder=" ">
+                        <label for="scan-desc">Keterangan</label>
+                        <i class="fa-solid fa-pen lead-icon"></i>
+                    </div>
+                    <button id="scan-add" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-xl hover:from-indigo-700 hover:to-violet-700 transition">Tambah ke Riwayat</button>
+                </div>
+
+                <p class="text-[11px] text-slate-400 mt-3 text-center">Akurasi OCR bervariasi; periksa kembali sebelum menyimpan.</p>
+            </div>
+        </div>
+
+        <header id="top" class="mb-8 text-center md:text-left fade-in">
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                <i class="fa-solid fa-wallet text-indigo-600 mr-2"></i>
+                <span class="gradient-text">Finansial track</span>
+            </h1>
+            <p class="text-slate-500 text-sm mt-1">Catat pengeluaran, pemasukan, dan pantau laba rugi Anda secara <span class="font-semibold text-indigo-600">Real-Time</span>.</p>
+        </header>
+
+        <!-- Stat cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="stat-card lift bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500 reveal">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Total Pemasukan</p>
+                        <h3 id="total-pemasukan" class="text-2xl font-bold text-emerald-600 mt-1 tabular-nums">Rp 0</h3>
+                        <p id="count-pemasukan" class="stat-sub">0 transaksi</p>
+                    </div>
+                    <div class="stat-icon in">
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card lift bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm border-l-4 border-rose-500 reveal">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Total Pengeluaran</p>
+                        <h3 id="total-pengeluaran" class="text-2xl font-bold text-rose-600 mt-1 tabular-nums">Rp 0</h3>
+                        <p id="count-pengeluaran" class="stat-sub">0 transaksi</p>
+                    </div>
+                    <div class="stat-icon out">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div id="box-laba-rugi" class="lift bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm border-l-4 border-indigo-500 fade-in">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Laba / Rugi Bersih</p>
+                        <h3 id="laba-rugi" class="text-2xl font-bold text-indigo-600 mt-1 tabular-nums">Rp 0</h3>
+                    </div>
+                    <div id="icon-laba-rugi" class="p-3 bg-indigo-50 rounded-2xl text-indigo-500">
+                        <i class="fa-solid fa-scale-balanced fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tombol Baca Psychology of Money -->
+        <div class="text-center mb-8">
+            <button id="open-book" type="button"
+               class="btn-press inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold shadow-sm hover:from-emerald-700 hover:to-teal-700 transition">
+                <i class="fa-solid fa-book-open"></i> Baca Psychology of Money
+            </button>
+        </div>
+
+        <!-- Modal Pembaca Buku (baca langsung, tanpa download) -->
+        <div id="book-modal" class="fixed inset-0 z-[70] hidden bg-slate-900/90 backdrop-blur-sm">
+            <div class="absolute inset-0 flex flex-col">
+                <div class="flex items-center justify-between px-4 py-3 bg-slate-900/80 text-white">
+                    <h3 class="text-sm font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-book-open text-emerald-400"></i> The Psychology of Money — Morgan Housel
+                    </h3>
+                    <button id="book-close" class="text-slate-300 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="flex-1 bg-white">
+                    <iframe id="book-frame" class="w-full h-full" style="border:0;" title="The Psychology of Money"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress bar: proporsi pemasukan vs pengeluaran -->
+        <div class="bg-white/80 backdrop-blur rounded-2xl shadow-sm p-5 mb-8 reveal">
+            <div class="flex justify-between items-center mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <span><i class="fa-solid fa-chart-pie mr-1 text-indigo-500"></i> Proporsi Arus Kas</span>
+                <span id="ratio-label">—</span>
+            </div>
+            <div class="w-full h-3 rounded-full bg-slate-100 overflow-hidden flex">
+                <div id="bar-pemasukan" class="h-full bg-emerald-500 transition-all duration-700 ease-out" style="width:0%"></div>
+                <div id="bar-pengeluaran" class="h-full bg-rose-500 transition-all duration-700 ease-out" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Rekap Bulanan -->
+        <div class="bg-white/80 backdrop-blur rounded-2xl shadow-sm p-6 mb-8 reveal">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+                <h2 class="text-lg font-bold text-slate-800">
+                    <i class="fa-solid fa-calendar-check mr-2 text-indigo-600"></i>Rekap Bulanan
+                </h2>
+                <div class="flex items-center gap-2">
+                    <button id="recap-prev" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition" title="Bulan sebelumnya"><i class="fa-solid fa-chevron-left"></i></button>
+                    <span id="recap-month" class="text-sm font-semibold text-slate-600 min-w-[120px] text-center">—</span>
+                    <button id="recap-next" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition" title="Bulan berikutnya"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <div class="bg-emerald-50 rounded-xl p-3">
+                    <p class="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Pemasukan</p>
+                    <p id="recap-in" class="text-base font-bold text-emerald-600 mt-0.5 tabular-nums">Rp 0</p>
+                </div>
+                <div class="bg-rose-50 rounded-xl p-3">
+                    <p class="text-[11px] font-semibold text-rose-700 uppercase tracking-wider">Pengeluaran</p>
+                    <p id="recap-out" class="text-base font-bold text-rose-600 mt-0.5 tabular-nums">Rp 0</p>
+                </div>
+                <div class="bg-indigo-50 rounded-xl p-3">
+                    <p class="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider">Laba/Rugi</p>
+                    <p id="recap-net" class="text-base font-bold text-indigo-600 mt-0.5 tabular-nums">Rp 0</p>
+                </div>
+                <div class="bg-slate-100 rounded-xl p-3">
+                    <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Transaksi</p>
+                    <p id="recap-count" class="text-base font-bold text-slate-600 mt-0.5 tabular-nums">0</p>
+                </div>
+            </div>
+
+            <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden flex">
+                <div id="recap-bar-in" class="h-full bg-emerald-500 transition-all duration-700 ease-out" style="width:0%"></div>
+                <div id="recap-bar-out" class="h-full bg-rose-500 transition-all duration-700 ease-out" style="width:0%"></div>
+            </div>
+            <p id="recap-empty" class="text-center text-sm text-slate-400 mt-4 hidden">Tidak ada transaksi pada bulan ini.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Form -->
+            <div class="lg:col-span-1 bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm h-fit reveal">
+                <div class="flex items-center justify-between mb-4 gap-2">
+                    <h2 class="text-lg font-bold text-slate-800">
+                        <i class="fa-solid fa-plus-circle mr-2 text-indigo-600"></i>Tambah Transaksi
+                    </h2>
+                    <button type="button" id="open-scan" class="scan-btn">
+                        <i class="fa-solid fa-camera-retro"></i> Scan Struk
+                    </button>
+                </div>
+                <form id="transaction-form" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Jenis Transaksi</label>
+                        <div class="seg" id="type-seg">
+                            <div class="seg-btn active-in" data-value="pemasukan">
+                                <span class="dot"></span><i class="fa-solid fa-arrow-down"></i> Pemasukan
+                            </div>
+                            <div class="seg-btn" data-value="pengeluaran">
+                                <span class="dot"></span><i class="fa-solid fa-arrow-up"></i> Pengeluaran
+                            </div>
+                        </div>
+                        <input type="hidden" id="type" value="pemasukan">
+                    </div>
+
+                    <div class="float-field">
+                        <input type="text" id="description" placeholder=" " required>
+                        <label for="description">Deskripsi / Keterangan</label>
+                        <i class="fa-solid fa-pen lead-icon"></i>
+                    </div>
+
+                    <div class="float-field">
+                        <input type="text" id="amount" inputmode="numeric" placeholder=" " required>
+                        <label for="amount">Jumlah (Rp)</label>
+                        <i class="fa-solid fa-rupiah-sign lead-icon"></i>
+                    </div>
+
+                    <div class="float-field">
+                        <input type="date" id="date" placeholder=" " required>
+                        <label for="date">Tanggal</label>
+                        <i class="fa-solid fa-calendar-day lead-icon"></i>
+                    </div>
+
+                    <button type="submit" class="btn-press w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-indigo-500/30 transition duration-200 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Simpan Transaksi
+                    </button>
+                </form>
+            </div>
+
+            <!-- History + chart -->
+            <div class="lg:col-span-2 space-y-8">
+                <div class="bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm reveal">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-slate-800">
+                            <i class="fa-solid fa-chart-pie mr-2 text-indigo-600"></i>Distribusi Keuangan
+                        </h2>
+                    </div>
+                    <div class="relative h-64">
+                        <canvas id="finance-chart"></canvas>
+                        <div id="chart-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                            <i class="fa-solid fa-chart-simple text-4xl mb-2"></i>
+                            <p class="text-sm">Belum ada data untuk ditampilkan</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm reveal">
+                    <div class="flex justify-between items-center mb-4 gap-3 flex-wrap">
+                        <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-history mr-2 text-indigo-600"></i>Riwayat Transaksi</h2>
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full tabular-nums">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <i class="fa-solid fa-clock text-indigo-500"></i>
+                                <span id="live-clock">--:--:--</span>
+                            </span>
+                            <button id="clear-all" class="text-xs text-rose-500 hover:text-rose-700 font-semibold hidden transition">
+                                <i class="fa-solid fa-trash-can mr-1"></i>Hapus Semua
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50/80">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Tanggal</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Keterangan</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Jenis</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Jumlah</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-list" class="bg-white divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="empty-state" class="text-center py-12 text-slate-300">
+                        <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
+                        <p class="text-sm">Belum ada transaksi tercatat.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kalkulator -->
+        <div class="bg-white/80 backdrop-blur rounded-2xl shadow-sm p-6 mt-8 mb-8 reveal" id="tarok-section">
+            <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                <h2 class="text-lg font-bold text-slate-800">
+                    <i class="fa-solid fa-piggy-bank mr-2 text-indigo-600"></i>Kalkulator presentase
+                </h2>
+                <button type="button" id="tarok-use-income" class="btn-press text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Pakai Total Pemasukan
+                </button>
+            </div>
+            <p class="text-sm text-slate-500 mb-5">Hitung berapa yang bisa Anda <span class="font-semibold text-indigo-600"></span> (sisihkan) dari sejumlah uang, berdasarkan persen yang diinginkan.</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                <div class="float-field">
+                    <input type="text" id="tarok-total" inputmode="numeric" placeholder=" ">
+                    <label for="tarok-total">Jumlah Uang (Rp)</label>
+                    <i class="fa-solid fa-sack-dollar lead-icon"></i>
+                </div>
+                <div class="float-field">
+                    <input type="text" id="tarok-pct" inputmode="decimal" placeholder=" ">
+                    <label for="tarok-pct">Persen (%)</label>
+                    <i class="fa-solid fa-percent lead-icon"></i>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div class="bg-indigo-50 rounded-xl p-4">
+                    <p class="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider">Dana Ditarik </p>
+                    <p id="tarok-result" class="text-xl font-bold text-indigo-600 mt-0.5 tabular-nums">Rp 0</p>
+                </div>
+                <div class="bg-emerald-50 rounded-xl p-4">
+                    <p class="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Sisa Uang</p>
+                    <p id="tarok-remaining" class="text-xl font-bold text-emerald-600 mt-0.5 tabular-nums">Rp 0</p>
+                </div>
+            </div>
+
+            <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden flex">
+                <div id="tarok-bar-tarok" class="h-full bg-indigo-500 transition-all duration-500 ease-out" style="width:0%"></div>
+                <div id="tarok-bar-sisa" class="h-full bg-emerald-500 transition-all duration-500 ease-out" style="width:0%"></div>
+            </div>
+            <p id="tarok-ratio" class="text-center text-xs text-slate-400 mt-2">Masukkan jumlah uang untuk mulai menghitung.</p>
+        </div>
+
+        <!-- Notepad Harian -->
+        <div class="bg-white/80 backdrop-blur rounded-2xl shadow-sm p-6 mt-8 mb-8 reveal" id="notepad-section">
+            <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                <h2 class="text-lg font-bold text-slate-800">
+                    <i class="fa-solid fa-note-sticky mr-2 text-indigo-600"></i>Notepad Harian
+                </h2>
+                <div class="flex items-center gap-2">
+                    <span id="notepad-date-label" class="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full"></span>
+                    <button type="button" id="notepad-prev" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition" title="Hari sebelumnya"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button type="button" id="notepad-today" class="text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Hari Ini</button>
+                    <button type="button" id="notepad-next" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition" title="Hari berikutnya"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <p class="text-sm text-slate-500 mb-4">Catatan harian Anda tersimpan otomatis per tanggal, sehingga mudah diakses kembali.</p>
+            <textarea id="notepad-text" rows="6" placeholder="Tulis catatan harian Anda di sini…"
+                class="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 resize-y focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/15 transition"></textarea>
+            <div class="flex items-center justify-between mt-3">
+                <span id="notepad-status" class="text-xs text-slate-400"><i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i>Tersimpan</span>
+                <button type="button" id="notepad-clear" class="text-xs text-rose-500 hover:text-rose-700 font-semibold transition">
+                    <i class="fa-solid fa-eraser mr-1"></i>Bersihkan Hari Ini
+                </button>
+            </div>
+        </div>
+
+        <!-- Kalkulator Kebutuhan Kalori -->
+        <div class="bg-white/80 backdrop-blur rounded-2xl shadow-sm p-6 mt-8 mb-8 reveal" id="calorie-section">
+            <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                <h2 class="text-lg font-bold text-slate-800">
+                    <i class="fa-solid fa-fire mr-2 text-orange-500"></i>Kalkulator Kebutuhan Kalori
+                </h2>
+                <span class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">Metode Mifflin-St Jeor</span>
+            </div>
+            <p class="text-sm text-slate-500 mb-6">Estimasi kebutuhan kalori harian (BMR &amp; TDEE) berdasarkan data tubuh dan tingkat aktivitas Anda.</p>
+
+            <form id="calorie-form" class="space-y-6">
+                <!-- Data Tubuh -->
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Data Tubuh</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1.5">Jenis Kelamin</label>
+                            <div class="seg" id="cal-gender-seg">
+                                <div class="seg-btn active-in" data-value="Laki-laki"><i class="fa-solid fa-mars"></i> Laki-laki</div>
+                                <div class="seg-btn" data-value="Perempuan"><i class="fa-solid fa-venus"></i> Perempuan</div>
+                            </div>
+                            <input type="hidden" id="cal-gender" value="Laki-laki">
+                        </div>
+                        <div class="float-field">
+                            <input type="text" id="cal-age" inputmode="numeric" placeholder=" ">
+                            <label for="cal-age">Usia (tahun)</label>
+                            <i class="fa-solid fa-cake-candles lead-icon"></i>
+                        </div>
+                        <div class="float-field">
+                            <input type="text" id="cal-weight" inputmode="decimal" placeholder=" ">
+                            <label for="cal-weight">Berat (kg)</label>
+                            <i class="fa-solid fa-weight-scale lead-icon"></i>
+                        </div>
+                        <div class="float-field">
+                            <input type="text" id="cal-height" inputmode="decimal" placeholder=" ">
+                            <label for="cal-height">Tinggi (cm)</label>
+                            <i class="fa-solid fa-ruler-vertical lead-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aktivitas & Tujuan -->
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Aktivitas &amp; Tujuan</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="cal-activity" class="block text-xs font-medium text-slate-500 mb-1.5">Tingkat Aktivitas</label>
+                            <div class="relative">
+                                <select id="cal-activity" class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-9 py-3 text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/15 transition">
+                                    <option value="1.2">Sangat ringan — jarang olahraga</option>
+                                    <option value="1.375">Ringan — 1–3x/minggu</option>
+                                    <option value="1.55" selected>Sedang — 3–5x/minggu</option>
+                                    <option value="1.725">Berat — 6–7x/minggu</option>
+                                    <option value="1.9">Sangat berat — 2x/hari</option>
+                                </select>
+                                <i class="fa-solid fa-person-running absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="cal-goal" class="block text-xs font-medium text-slate-500 mb-1.5">Tujuan</label>
+                            <div class="relative">
+                                <select id="cal-goal" class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-9 py-3 text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/15 transition">
+                                    <option value="cut">Turun Berat — defisit 15%</option>
+                                    <option value="maintain" selected>Pertahankan — netral</option>
+                                    <option value="bulk">Naik Berat — surplus 15%</option>
+                                </select>
+                                <i class="fa-solid fa-bullseye absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-press w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-orange-500/30 transition duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-calculator"></i> Hitung Kebutuhan Kalori
+                </button>
+            </form>
+
+            <div id="cal-result" class="hidden mt-6 space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-orange-50 rounded-xl p-4 flex items-start gap-3">
+                        <div class="stat-icon" style="background:linear-gradient(135deg,#fb923c,#ea580c);width:40px;height:40px;font-size:1rem;"><i class="fa-solid fa-bed"></i></div>
+                        <div>
+                            <p class="text-[11px] font-semibold text-orange-700 uppercase tracking-wider">BMR</p>
+                            <p id="cal-bmr" class="text-lg font-bold text-orange-600 tabular-nums">0 kcal</p>
+                            <p class="text-[11px] text-orange-500/80 mt-0.5">Kalori dasar istirahat</p>
+                        </div>
+                    </div>
+                    <div class="bg-indigo-50 rounded-xl p-4 flex items-start gap-3">
+                        <div class="stat-icon" style="background:linear-gradient(135deg,#818cf8,#4f46e5);width:40px;height:40px;font-size:1rem;"><i class="fa-solid fa-bolt"></i></div>
+                        <div>
+                            <p class="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider">TDEE</p>
+                            <p id="cal-tdee" class="text-lg font-bold text-indigo-600 tabular-nums">0 kcal</p>
+                            <p class="text-[11px] text-indigo-500/80 mt-0.5">Total dengan aktivitas</p>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-50 rounded-xl p-4 flex items-start gap-3">
+                        <div class="stat-icon" style="background:linear-gradient(135deg,#34d399,#059669);width:40px;height:40px;font-size:1rem;"><i class="fa-solid fa-bullseye"></i></div>
+                        <div>
+                            <p class="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Target</p>
+                            <p id="cal-target" class="text-lg font-bold text-emerald-600 tabular-nums">0 kcal</p>
+                            <p class="text-[11px] text-emerald-500/80 mt-0.5">Sesuai tujuan Anda</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 text-center">Hasil bersifat estimasi. Konsultasikan dengan ahli gizi untuk kebutuhan medis tertentu.</p>
+            </div>
+            <p id="cal-empty" class="text-center text-sm text-slate-400 mt-6">Isi data di atas lalu tekan "Hitung Kebutuhan Kalori".</p>
+        </div>
+
+        <footer class="text-center text-xs text-slate-400 mt-10">
+            <i class="fa-solid fa-lock mr-1"></i> Data tersimpan secara lokal di perangkat Anda.
+            <span class="mx-1">•</span>
+            <span>Developer Muhammad Allatif</span>
+        </footer>
+    </div>
+
+    <script>
+        // Mengambil data dari localStorage jika ada, atau membuat array kosong
+        // ===== Konfigurasi API (ganti API_BASE_URL dengan URL backend Anda) =====
+        const API_BASE_URL = 'https://api.example.com'; // <-- sesuaikan dengan backend Anda
+        const API_ENDPOINTS = {
+            list:   () => `${API_BASE_URL}/api/transactions`,
+            create: () => `${API_BASE_URL}/api/transactions`,
+            remove: (id) => `${API_BASE_URL}/api/transactions/${encodeURIComponent(id)}`,
+            clear:  () => `${API_BASE_URL}/api/transactions`
+        };
+
+        // Wrapper fetch dengan penanganan error standar (tanpa auth)
+        async function apiFetch(url, options = {}) {
+            const res = await fetch(url, {
+                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                ...options
+            });
+            if (!res.ok) throw new Error('API merespons status ' + res.status);
+            const text = await res.text();
+            return text ? JSON.parse(text) : null;
+        }
+
+        // State transaksi (sumber render). Diisi dari API, fallback localStorage.
+        let transactions = [];
+
+        // Ambil transaksi dari API; bila gagal, pakai localStorage sebagai cadangan
+        async function loadTransactions() {
+            try {
+                const data = await apiFetch(API_ENDPOINTS.list());
+                if (Array.isArray(data)) {
+                    transactions = data;
+                    localStorage.setItem('transactions', JSON.stringify(transactions)); // simpan cadangan
+                    return;
+                }
+            } catch (err) {
+                console.warn('Gagal memuat dari API, menggunakan localStorage:', err);
+            }
+            transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        }
+
+        // DOM Elements
+        const form = document.getElementById('transaction-form');
+        const typeInput = document.getElementById('type');
+        const descInput = document.getElementById('description');
+        const amountInput = document.getElementById('amount');
+        const dateInput = document.getElementById('date');
+
+        const totalPemasukanEl = document.getElementById('total-pemasukan');
+        const totalPengeluaranEl = document.getElementById('total-pengeluaran');
+        const countPemasukanEl = document.getElementById('count-pemasukan');
+        const countPengeluaranEl = document.getElementById('count-pengeluaran');
+        const labaRugiEl = document.getElementById('laba-rugi');
+        const boxLabaRugi = document.getElementById('box-laba-rugi');
+        const iconLabaRugi = document.getElementById('icon-laba-rugi');
+
+        const barPemasukan = document.getElementById('bar-pemasukan');
+        const barPengeluaran = document.getElementById('bar-pengeluaran');
+        const ratioLabel = document.getElementById('ratio-label');
+
+        const transactionList = document.getElementById('transaction-list');
+        const emptyState = document.getElementById('empty-state');
+        const clearAllBtn = document.getElementById('clear-all');
+        const chartEmpty = document.getElementById('chart-empty');
+
+        // Set default input tanggal ke hari ini
+        dateInput.value = new Date().toISOString().split('T')[0];
+
+        // Auto-format nominal dengan pemisah ribuan saat mengetik
+        amountInput.addEventListener('input', function() {
+            const raw = this.value.replace(/[^\d]/g, ''); // hanya angka
+            this.value = raw ? new Intl.NumberFormat('id-ID').format(Number(raw)) : '';
+        });
+
+        // Segmented toggle untuk jenis transaksi
+        const typeSeg = document.getElementById('type-seg');
+        typeSeg.querySelectorAll('.seg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                typeSeg.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active-in', 'active-out'));
+                const val = btn.dataset.value;
+                btn.classList.add(val === 'pemasukan' ? 'active-in' : 'active-out');
+                typeInput.value = val;
+            });
+        });
+
+        // Floating label untuk input tanggal (date tidak mendukung :placeholder-shown)
+        dateInput.addEventListener('change', () => dateInput.classList.toggle('filled', !!dateInput.value));
+        dateInput.addEventListener('blur', () => dateInput.classList.toggle('filled', !!dateInput.value));
+
+        // Format angka ke Rupiah
+        function formatRupiah(angka) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(angka);
+        }
+
+        // Animated count-up for a number element
+        function animateValue(el, start, end, duration = 600) {
+            const startTime = performance.now();
+            function tick(now) {
+                const p = Math.min((now - startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+                const val = Math.round(start + (end - start) * eased);
+                el.textContent = formatRupiah(val);
+                if (p < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const colors = {
+                success: 'border-emerald-400 text-emerald-700',
+                danger:  'border-rose-400 text-rose-700',
+                info:    'border-indigo-400 text-indigo-700'
+            };
+            const icons = { success: 'fa-circle-check', danger: 'fa-circle-exclamation', info: 'fa-circle-info' };
+            const toast = document.createElement('div');
+            toast.className = `toast-in bg-white border-l-4 ${colors[type]} shadow-lg rounded-xl px-4 py-3 flex items-center gap-3 text-sm font-medium`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type]} text-lg"></i><span>${message}</span>`;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => {
+                toast.classList.replace('toast-in', 'toast-out');
+                toast.addEventListener('animationend', () => toast.remove());
+            }, 2600);
+        }
+
+        // Chart.js setup
+        let chart;
+        function initChart() {
+            const ctx = document.getElementById('finance-chart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pemasukan', 'Pengeluaran'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#10b981', '#f43f5e'],
+                        borderColor: '#fff',
+                        borderWidth: 3,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { family: 'inherit' } } },
+                        tooltip: {
+                            callbacks: { label: (c) => ` ${c.label}: ${formatRupiah(c.raw)}` }
+                        }
+                    },
+                    animation: { animateScale: true, animateRotate: true, duration: 800 }
+                }
+            });
+        }
+
+        // Track previous values for count-up
+        let currentPemasukan = 0, currentPengeluaran = 0, currentLaba = 0;
+
+        // Hitung Total dan Laba Rugi
+        function updateDashboard() {
+            const pemasukan = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+            const pengeluaran = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+            const labaRugi = pemasukan - pengeluaran;
+
+            const countIn = transactions.filter(t => t.type === 'pemasukan').length;
+            const countOut = transactions.filter(t => t.type === 'pengeluaran').length;
+            countPemasukanEl.textContent = countIn + ' transaksi';
+            countPengeluaranEl.textContent = countOut + ' transaksi';
+
+            // Animated counters
+            animateValue(totalPemasukanEl, currentPemasukan, pemasukan);
+            animateValue(totalPengeluaranEl, currentPengeluaran, pengeluaran);
+            animateValue(labaRugiEl, currentLaba, labaRugi);
+            currentPemasukan = pemasukan; currentPengeluaran = pengeluaran; currentLaba = labaRugi;
+
+            // Laba rugi box styling
+            boxLabaRugi.classList.remove('pulse'); void boxLabaRugi.offsetWidth; boxLabaRugi.classList.add('pulse');
+            if (labaRugi > 0) {
+                labaRugiEl.className = "text-2xl font-bold text-emerald-600 mt-1 tabular-nums";
+                boxLabaRugi.className = "lift bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500 fade-in pulse";
+                iconLabaRugi.className = "p-3 bg-emerald-50 rounded-2xl text-emerald-500";
+                iconLabaRugi.innerHTML = '<i class="fa-solid fa-face-smile fa-xl"></i>';
+            } else if (labaRugi < 0) {
+                labaRugiEl.className = "text-2xl font-bold text-rose-600 mt-1 tabular-nums";
+                boxLabaRugi.className = "lift bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm border-l-4 border-rose-500 fade-in pulse";
+                iconLabaRugi.className = "p-3 bg-rose-50 rounded-2xl text-rose-500";
+                iconLabaRugi.innerHTML = '<i class="fa-solid fa-face-frown fa-xl"></i>';
+            } else {
+                labaRugiEl.className = "text-2xl font-bold text-slate-600 mt-1 tabular-nums";
+                boxLabaRugi.className = "lift bg-white/80 backdrop-blur p-6 rounded-2xl shadow-sm border-l-4 border-slate-400 fade-in pulse";
+                iconLabaRugi.className = "p-3 bg-slate-100 rounded-2xl text-slate-400";
+                iconLabaRugi.innerHTML = '<i class="fa-solid fa-scale-balanced fa-xl"></i>';
+            }
+
+            // Progress bar
+            const total = pemasukan + pengeluaran;
+            const pPct = total ? (pemasukan / total) * 100 : 0;
+            const kPct = total ? (pengeluaran / total) * 100 : 0;
+            barPemasukan.style.width = pPct + '%';
+            barPengeluaran.style.width = kPct + '%';
+            ratioLabel.textContent = total ? `${Math.round(pPct)}% masuk / ${Math.round(kPct)}% keluar` : '—';
+
+            // Chart
+            if (chart) {
+                chart.data.datasets[0].data = [pemasukan, pengeluaran];
+                chart.update();
+            }
+            chartEmpty.style.display = transactions.length ? 'none' : 'flex';
+        }
+
+        // Render List Tabel Transaksi
+        function renderTransactions() {
+            transactionList.innerHTML = '';
+
+            if (transactions.length === 0) {
+                emptyState.classList.remove('hidden');
+                clearAllBtn.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            clearAllBtn.classList.remove('hidden');
+
+            const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sorted.forEach((t, i) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition duration-150 row-in";
+                tr.style.animationDelay = (i * 35) + 'ms';
+
+                const isPemasukan = t.type === 'pemasukan';
+                const badgeClass = isPemasukan ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
+                const amountClass = isPemasukan ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
+                const sign = isPemasukan ? '+' : '-';
+
+                const formattedDate = new Date(t.date).toLocaleDateString('id-ID', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                });
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500">${formattedDate}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-800">${t.description}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                        <span class="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}">
+                            ${t.type}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-right ${amountClass} tabular-nums">
+                        ${sign} ${formatRupiah(t.amount)}
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                        <button onclick="deleteTransaction('${t.id}')" class="text-rose-400 hover:text-rose-600 hover:scale-110 transition duration-150" title="Hapus">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                transactionList.appendChild(tr);
+            });
+        }
+
+        // Tambah Transaksi Baru
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const newTransaction = {
+                id: Date.now().toString(),
+                type: typeInput.value,
+                description: descInput.value.trim(),
+                amount: parseFloat(amountInput.value.replace(/[^\d]/g, '')),
+                date: dateInput.value
+            };
+
+            transactions.push(newTransaction);
+            saveData(); // simpan cadangan lokal & render
+
+            showToast(
+                (newTransaction.type === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran') + ' berhasil ditambahkan',
+                'success'
+            );
+
+            descInput.value = '';
+            amountInput.value = '';
+            typeInput.focus();
+
+            // Kirim ke backend API
+            try {
+                const saved = await apiFetch(API_ENDPOINTS.create(), {
+                    method: 'POST',
+                    body: JSON.stringify(newTransaction)
+                });
+                // Jika server mengembalikan id baru, samakan dengan data lokal
+                if (saved && saved.id && saved.id !== newTransaction.id) {
+                    const idx = transactions.findIndex(t => t.id === newTransaction.id);
+                    if (idx > -1) { transactions[idx] = { ...transactions[idx], ...saved }; saveData(); }
+                }
+            } catch (err) {
+                console.warn('Gagal mengirim transaksi ke API (tetap tersimpan di lokal):', err);
+            }
+        });
+
+        // Hapus Transaksi Tertentu
+        async function deleteTransaction(id) {
+            transactions = transactions.filter(x => x.id !== id);
+            saveData();
+            showToast('Transaksi dihapus', 'danger');
+            // Hapus di backend API
+            try {
+                await apiFetch(API_ENDPOINTS.remove(id), { method: 'DELETE' });
+            } catch (err) {
+                console.warn('Gagal menghapus transaksi di API:', err);
+            }
+        }
+
+        // Hapus Semua Transaksi
+        clearAllBtn.addEventListener('click', async function() {
+            if (confirm("Apakah Anda yakin ingin menghapus SEMUA catatan keuangan Anda?")) {
+                transactions = [];
+                saveData();
+                showToast('Semua catatan dihapus', 'danger');
+                // Hapus semua di backend API
+                try {
+                    await apiFetch(API_ENDPOINTS.clear(), { method: 'DELETE' });
+                } catch (err) {
+                    console.warn('Gagal menghapus semua transaksi di API:', err);
+                }
+            }
+        });
+
+        // Fungsi Simpan Data ke Local Storage dan Re-render
+        function saveData() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            updateDashboard();
+            renderTransactions();
+            renderRecap();
+        }
+
+        // Jam real-time otomatis (tanpa refresh)
+        const liveClockEl = document.getElementById('live-clock');
+        function updateClock() {
+            const now = new Date();
+            liveClockEl.textContent = now.toLocaleTimeString('id-ID', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // ===== Profil & Login Google =====
+        const loginBtn = document.getElementById('login-btn');
+        const profileLogged = document.getElementById('profile-logged');
+        const avatarBtn = document.getElementById('avatar-btn');
+        const profileMenu = document.getElementById('profile-menu');
+        const menuAvatar = document.getElementById('menu-avatar');
+        const pmName = document.getElementById('pm-name');
+        const pmEmail = document.getElementById('pm-email');
+        const pmLogout = document.getElementById('pm-logout');
+        const pmSync = document.getElementById('pm-sync');
+
+        function renderProfile() {
+            const user = JSON.parse(localStorage.getItem('ft_user'));
+            if (user) {
+                loginBtn.classList.add('hidden');
+                profileLogged.classList.remove('hidden');
+                profileLogged.classList.add('flex');
+                const initial = (user.name || user.email || 'U').charAt(0).toUpperCase();
+                const fill = u => { u.textContent = initial; u.innerHTML = user.picture ? `<img src="${user.picture}" alt="">` : initial; };
+                fill(avatarBtn); fill(menuAvatar);
+                pmName.textContent = user.name || 'Pengguna';
+                pmEmail.textContent = user.email || '—';
+            } else {
+                loginBtn.classList.remove('hidden');
+                profileLogged.classList.add('hidden');
+                profileLogged.classList.remove('flex');
+                profileMenu.classList.add('hidden');
+                document.getElementById('menu-backdrop').classList.add('hidden');
+            }
+        }
+
+        // ===== Notifikasi Login ke Admin (audit) =====
+        // Email TIDAK bisa dikirim dari HTML statis — butuh endpoint backend.
+        // Rekomendasi: Google Apps Script Web App (gratis, kredensial aman di sisi Google).
+        // Deploy script (lihat petunjuk di chat) lalu tempel URL-nya ke NOTIFY_ENDPOINT.
+        const NOTIFY_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz-XTjXWTg2yc7RuuuxJsltHKLwllbnpURcATbzqtTbhcEU4dj0wsjKX5q7qshK8fgww/exec'; // <-- tempel URL Google Apps Script Web App di sini
+        const NOTIFY_SECRET = 'mantapsekali123'; // <-- cocokkan dengan script Apps Script
+
+        async function notifyLogin(user) {
+            if (!NOTIFY_ENDPOINT) return; // notifikasi nonaktif bila endpoint kosong
+            try {
+                let ip = '';
+                try {
+                    const r = await fetch('https://api.ipify.org?format=json');
+                    const d = await r.json();
+                    ip = d.ip || '';
+                } catch (e) { /* IP diambil dari server bila gagal */ }
+                await fetch(NOTIFY_ENDPOINT, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secret: NOTIFY_SECRET,
+                        name: user.name || '',
+                        email: user.email || '',
+                        time: new Date().toISOString(),
+                        ip: ip,
+                        ua: navigator.userAgent
+                    })
+                });
+            } catch (e) {
+                console.warn('Gagal mengirim notifikasi login:', e);
+            }
+        }
+
+        // Simulasi login Google (ganti dengan Google Identity Services untuk produksi)
+        loginBtn.addEventListener('click', () => {
+            // Contoh akun demo — di produksi, ganti dengan respons dari Google OAuth.
+            const demoUser = {
+                name: 'Budi Santoso',
+                email: 'budi.santoso@gmail.com',
+                picture: '' // isi dengan URL foto Google bila ada
+            };
+            localStorage.setItem('ft_user', JSON.stringify(demoUser));
+            renderProfile();
+            notifyLogin(demoUser);
+            showToast('Berhasil masuk sebagai ' + demoUser.name, 'success');
+        });
+
+        avatarBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const willShow = profileMenu.classList.contains('hidden');
+            profileMenu.classList.toggle('hidden');
+            document.getElementById('menu-backdrop').classList.toggle('hidden', !willShow);
+            if (willShow) applySheetMode();
+        });
+
+        // Mode bottom-sheet di layar kecil, dropdown biasa di layar besar
+        function applySheetMode() {
+            const isMobile = window.matchMedia('(max-width: 639px)').matches;
+            profileMenu.classList.toggle('sheet', isMobile);
+        }
+        window.addEventListener('resize', () => {
+            if (!profileMenu.classList.contains('hidden')) applySheetMode();
+        });
+        document.getElementById('menu-backdrop').addEventListener('click', () => {
+            profileMenu.classList.add('hidden');
+            document.getElementById('menu-backdrop').classList.add('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('profile-wrap').contains(e.target)) {
+                profileMenu.classList.add('hidden');
+                document.getElementById('menu-backdrop').classList.add('hidden');
+            }
+        });
+        pmLogout.addEventListener('click', () => {
+            localStorage.removeItem('ft_user');
+            profileMenu.classList.add('hidden');
+            document.getElementById('menu-backdrop').classList.add('hidden');
+            renderProfile();
+            showToast('Anda telah keluar', 'info');
+        });
+        pmSync.addEventListener('click', () => {
+            profileMenu.classList.add('hidden');
+            document.getElementById('menu-backdrop').classList.add('hidden');
+            showToast('Data tersinkron (demo)', 'info');
+        });
+
+        // ===== Edit Profil (nama & foto) =====
+        const profileModal = document.getElementById('profile-modal');
+        const modalAvatar = document.getElementById('modal-avatar');
+        const pmNameInput = document.getElementById('pm-name-input');
+        const pmPhoto = document.getElementById('pm-photo');
+        const pmEdit = document.getElementById('pm-edit');
+        const pmClose = document.getElementById('pm-close');
+        const pmCancel = document.getElementById('pm-cancel');
+        const pmSave = document.getElementById('pm-save');
+        let pendingPhoto = null; // data URL foto baru (sebelum disimpan)
+
+        function openModal() {
+            const user = JSON.parse(localStorage.getItem('ft_user')) || {};
+            pmNameInput.value = user.name || '';
+            pendingPhoto = user.picture || null;
+            renderModalAvatar();
+            profileMenu.classList.add('hidden');
+            document.getElementById('menu-backdrop').classList.add('hidden');
+            profileModal.classList.remove('hidden');
+            profileModal.classList.add('flex');
+            setTimeout(() => pmNameInput.focus(), 50);
+        }
+        function closeModal() {
+            profileModal.classList.add('hidden');
+            profileModal.classList.remove('flex');
+        }
+        function renderModalAvatar() {
+            const user = JSON.parse(localStorage.getItem('ft_user')) || {};
+            const initial = (pmNameInput.value || user.email || 'U').charAt(0).toUpperCase();
+            modalAvatar.innerHTML = pendingPhoto ? `<img src="${pendingPhoto}" alt="">` : initial;
+        }
+
+        pmEdit.addEventListener('click', openModal);
+        pmClose.addEventListener('click', closeModal);
+        pmCancel.addEventListener('click', closeModal);
+        profileModal.addEventListener('click', (e) => { if (e.target === profileModal) closeModal(); });
+
+        pmNameInput.addEventListener('input', renderModalAvatar);
+
+        // Baca file foto -> data URL (preview langsung, tanpa upload)
+        pmPhoto.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) { showToast('Ukuran foto maksimal 2 MB', 'danger'); this.value = ''; return; }
+            const reader = new FileReader();
+            reader.onload = (e) => { pendingPhoto = e.target.result; renderModalAvatar(); };
+            reader.readAsDataURL(file);
+        });
+
+        pmSave.addEventListener('click', () => {
+            const name = pmNameInput.value.trim();
+            if (!name) { showToast('Nama tidak boleh kosong', 'danger'); return; }
+            const user = JSON.parse(localStorage.getItem('ft_user')) || {};
+            user.name = name;
+            if (pendingPhoto !== undefined) user.picture = pendingPhoto;
+            localStorage.setItem('ft_user', JSON.stringify(user));
+            closeModal();
+            renderProfile();
+            showToast('Profil berhasil diperbarui', 'success');
+        });
+
+        renderProfile();
+
+        // ===== Scan Struk (OCR via Tesseract.js) =====
+        const scanModal = document.getElementById('scan-modal');
+        const scanFile = document.getElementById('scan-file');
+        const scanDrop = document.getElementById('scan-drop');
+        const scanPreviewWrap = document.getElementById('scan-preview-wrap');
+        const scanPreview = document.getElementById('scan-preview');
+        const scanProgressWrap = document.getElementById('scan-progress-wrap');
+        const scanStatus = document.getElementById('scan-status');
+        const scanPct = document.getElementById('scan-pct');
+        const scanBar = document.getElementById('scan-bar');
+        const scanResult = document.getElementById('scan-result');
+        const scanRaw = document.getElementById('scan-raw');
+        const scanType = document.getElementById('scan-type');
+        const scanAmount = document.getElementById('scan-amount');
+        const scanDesc = document.getElementById('scan-desc');
+        const scanAdd = document.getElementById('scan-add');
+        const openScanBtn = document.getElementById('open-scan');
+        const scanClose = document.getElementById('scan-close');
+
+        function openScan() {
+            resetScan();
+            scanModal.classList.remove('hidden');
+            scanModal.classList.add('flex');
+        }
+        function closeScan() {
+            scanModal.classList.add('hidden');
+            scanModal.classList.remove('flex');
+        }
+        function resetScan() {
+            scanFile.value = '';
+            scanPreviewWrap.classList.add('hidden');
+            scanProgressWrap.classList.add('hidden');
+            scanResult.classList.add('hidden');
+            scanBar.style.width = '0%';
+            scanPct.textContent = '0%';
+            scanRaw.textContent = '';
+            scanAmount.value = '';
+            scanDesc.value = '';
+            if (cameraStream) stopCamera();
+        }
+
+        openScanBtn.addEventListener('click', openScan);
+        scanClose.addEventListener('click', closeScan);
+        scanModal.addEventListener('click', (e) => { if (e.target === scanModal) closeScan(); });
+        scanDrop.addEventListener('click', () => scanFile.click());
+
+        // Auto-format nominal di hasil scan
+        scanAmount.addEventListener('input', function() {
+            const raw = this.value.replace(/[^\d]/g, '');
+            this.value = raw ? new Intl.NumberFormat('id-ID').format(Number(raw)) : '';
+        });
+
+        scanFile.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                scanPreview.src = e.target.result;
+                scanPreviewWrap.classList.remove('hidden');
+                runOCR(file);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ===== Kamera (getUserMedia) =====
+        const scanTab = document.getElementById('scan-tab');
+        const scanUploadPanel = document.getElementById('scan-upload-panel');
+        const scanCameraPanel = document.getElementById('scan-camera-panel');
+        const scanVideo = document.getElementById('scan-video');
+        const scanCamPlaceholder = document.getElementById('scan-cam-placeholder');
+        const scanCamStart = document.getElementById('scan-cam-start');
+        const scanCamCapture = document.getElementById('scan-cam-capture');
+        const scanCamError = document.getElementById('scan-cam-error');
+        let cameraStream = null;
+
+        scanTab.querySelectorAll('.seg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                scanTab.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active-in', 'active-out'));
+                const tab = btn.dataset.tab;
+                btn.classList.add(tab === 'upload' ? 'active-in' : 'active-out');
+                const isCam = tab === 'camera';
+                scanUploadPanel.classList.toggle('hidden', isCam);
+                scanCameraPanel.classList.toggle('hidden', !isCam);
+                if (isCam) startCamera(); else stopCamera();
+            });
+        });
+
+        async function startCamera() {
+            scanCamError.classList.add('hidden');
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                scanCamError.textContent = 'Kamera tidak didukung di perangkat/peramban ini.';
+                scanCamError.classList.remove('hidden');
+                return;
+            }
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+                scanVideo.srcObject = cameraStream;
+                scanCamPlaceholder.classList.add('hidden');
+                scanCamStart.classList.add('hidden');
+                scanCamCapture.classList.remove('hidden');
+            } catch (err) {
+                scanCamError.textContent = 'Tidak dapat mengakses kamera. Pastikan izin diberikan.';
+                scanCamError.classList.remove('hidden');
+                console.error(err);
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+            }
+            scanVideo.srcObject = null;
+            scanCamPlaceholder.classList.remove('hidden');
+            scanCamStart.classList.remove('hidden');
+            scanCamCapture.classList.add('hidden');
+        }
+
+        scanCamStart.addEventListener('click', startCamera);
+
+        scanCamCapture.addEventListener('click', () => {
+            const w = scanVideo.videoWidth || 640;
+            const h = scanVideo.videoHeight || 480;
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(scanVideo, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/png');
+            scanPreview.src = dataUrl;
+            scanPreviewWrap.classList.remove('hidden');
+            stopCamera();
+            // Konversi ke File lalu OCR
+            canvas.toBlob((blob) => {
+                if (blob) runOCR(blob);
+            }, 'image/png');
+        });
+
+        // Hentikan kamera saat modal ditutup
+        const _origCloseScan = closeScan;
+        closeScan = function() { stopCamera(); _origCloseScan(); };
+
+        function runOCR(file) {
+            scanProgressWrap.classList.remove('hidden');
+            scanResult.classList.add('hidden');
+            scanStatus.textContent = 'Memuat mesin OCR…';
+            scanBar.style.width = '5%';
+
+            Tesseract.recognize(file, 'eng+ind', {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        const p = Math.round(m.progress * 100);
+                        scanBar.style.width = p + '%';
+                        scanPct.textContent = p + '%';
+                        scanStatus.textContent = 'Membaca struk…';
+                    } else if (m.status === 'loading language traineddata') {
+                        scanStatus.textContent = 'Memuat bahasa OCR…';
+                    }
+                }
+            }).then(({ data }) => {
+                const text = data.text.trim();
+                scanRaw.textContent = text || '(tidak ada teks terdeteksi)';
+                scanBar.style.width = '100%';
+                scanPct.textContent = '100%';
+                scanStatus.textContent = 'Selesai';
+                parseReceipt(text);
+                scanResult.classList.remove('hidden');
+            }).catch(err => {
+                scanStatus.textContent = 'Gagal memindai';
+                showToast('Gagal memindai struk', 'danger');
+                console.error(err);
+            });
+        }
+
+        // Ekstrak nominal & keterangan dari teks OCR
+        function parseReceipt(text) {
+            const lower = text.toLowerCase();
+
+            // Deteksi jenis: gaji/income/deposit -> pemasukan; "terima kasih" dikecualikan
+            const isIncome = /(gaji|salary|income|pemasukan|transfer masuk|deposit|diterima)/.test(lower)
+                && !/terima\s*kasih/.test(lower);
+            scanType.value = isIncome ? 'pemasukan' : 'pengeluaran';
+
+            // Cari nominal terbesar dalam format Rupiah (dengan/tanpa titik/koma)
+            // pola: Rp diikuti angka, atau angka dengan pemisah ribuan
+            const candidates = [];
+            const rpPattern = /(?:rp\.?|idr)\s*([\d.,]+)/gi;
+            let m;
+            while ((m = rpPattern.exec(text)) !== null) {
+                candidates.push(toNumber(m[1]));
+            }
+            // juga angka dengan titik/koma sebagai pemisah ribuan (mis. 25.000 atau 1,250,000)
+            const numPattern = /(?<!\d)(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?|\d{4,})(?![\d.,])/g;
+            while ((m = numPattern.exec(text)) !== null) {
+                candidates.push(toNumber(m[0]));
+            }
+
+            if (candidates.length) {
+                const amount = Math.max(...candidates.filter(n => n > 0));
+                scanAmount.value = amount ? new Intl.NumberFormat('id-ID').format(amount) : '';
+            }
+
+            // Keterangan: ambis baris pertama yang cukup bermakna
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+            let desc = '';
+            for (const line of lines) {
+                if (/^(rp|idr|total|\d)/i.test(line)) continue;
+                if (line.length >= 3 && line.length <= 40) { desc = line; break; }
+            }
+            scanDesc.value = desc || 'Hasil scan struk';
+        }
+
+        function toNumber(s) {
+            // hilangkan titik sebagai pemisah ribuan, ubah koma terakhir jadi titik desimal
+            let str = s.replace(/\./g, '').replace(',', '.');
+            const n = parseFloat(str);
+            return isNaN(n) ? 0 : n;
+        }
+
+        scanAdd.addEventListener('click', async () => {
+            const amount = parseFloat(scanAmount.value.replace(/[^\d]/g, ''));
+            const desc = scanDesc.value.trim();
+            if (!amount || amount <= 0) { showToast('Jumlah tidak valid', 'danger'); return; }
+            const newTransaction = {
+                id: Date.now().toString(),
+                type: scanType.value,
+                description: desc || 'Hasil scan struk',
+                amount: amount,
+                date: new Date().toISOString().split('T')[0]
+            };
+            transactions.push(newTransaction);
+            saveData(); // simpan cadangan lokal & render
+            closeScan();
+            showToast((newTransaction.type === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran') + ' dari struk ditambahkan', 'success');
+
+            // Kirim ke backend API
+            try {
+                const saved = await apiFetch(API_ENDPOINTS.create(), {
+                    method: 'POST',
+                    body: JSON.stringify(newTransaction)
+                });
+                if (saved && saved.id && saved.id !== newTransaction.id) {
+                    const idx = transactions.findIndex(t => t.id === newTransaction.id);
+                    if (idx > -1) { transactions[idx] = { ...transactions[idx], ...saved }; saveData(); }
+                }
+            } catch (err) {
+                console.warn('Gagal mengirim hasil scan ke API (tetap tersimpan di lokal):', err);
+            }
+        });
+
+        // ===== Rekap Bulanan =====
+        const recapMonthEl = document.getElementById('recap-month');
+        const recapInEl = document.getElementById('recap-in');
+        const recapOutEl = document.getElementById('recap-out');
+        const recapNetEl = document.getElementById('recap-net');
+        const recapCountEl = document.getElementById('recap-count');
+        const recapBarIn = document.getElementById('recap-bar-in');
+        const recapBarOut = document.getElementById('recap-bar-out');
+        const recapEmpty = document.getElementById('recap-empty');
+        const recapPrev = document.getElementById('recap-prev');
+        const recapNext = document.getElementById('recap-next');
+
+        // Bulan yang sedang ditampilkan (default: bulan ini). Disimpan sebagai 'YYYY-MM'
+        let recapKey = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); })();
+
+        const MONTH_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+        function monthKeyOf(dateStr) {
+            const d = new Date(dateStr);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        }
+        function labelOf(key) {
+            const [y, m] = key.split('-').map(Number);
+            return MONTH_NAMES[m - 1] + ' ' + y;
+        }
+
+        function renderRecap() {
+            const items = transactions.filter(t => monthKeyOf(t.date) === recapKey);
+            const inSum = items.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+            const outSum = items.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+            const net = inSum - outSum;
+
+            recapMonthEl.textContent = labelOf(recapKey);
+            recapInEl.textContent = formatRupiah(inSum);
+            recapOutEl.textContent = formatRupiah(outSum);
+            recapNetEl.textContent = formatRupiah(net);
+            recapNetEl.className = 'text-base font-bold mt-0.5 tabular-nums ' + (net > 0 ? 'text-emerald-600' : net < 0 ? 'text-rose-600' : 'text-slate-600');
+            recapCountEl.textContent = items.length;
+
+            const total = inSum + outSum;
+            recapBarIn.style.width = total ? (inSum / total * 100) + '%' : '0%';
+            recapBarOut.style.width = total ? (outSum / total * 100) + '%' : '0%';
+            recapEmpty.classList.toggle('hidden', items.length > 0);
+        }
+
+        recapPrev.addEventListener('click', () => {
+            let [y, m] = recapKey.split('-').map(Number);
+            m--; if (m < 1) { m = 12; y--; }
+            recapKey = y + '-' + String(m).padStart(2, '0');
+            renderRecap();
+        });
+        recapNext.addEventListener('click', () => {
+            let [y, m] = recapKey.split('-').map(Number);
+            m++; if (m > 12) { m = 1; y++; }
+            recapKey = y + '-' + String(m).padStart(2, '0');
+            renderRecap();
+        });
+
+        // Notifikasi otomatis saat memasuki bulan baru (1x per bulan)
+        function checkMonthRollover() {
+            const lastKey = localStorage.getItem('ft_last_month');
+            const nowKey = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); })();
+            if (lastKey && lastKey !== nowKey) {
+                // Ambil data bulan lalu untuk ditampilkan di notifikasi
+                const prevItems = transactions.filter(t => monthKeyOf(t.date) === lastKey);
+                const inSum = prevItems.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+                const outSum = prevItems.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+                const net = inSum - outSum;
+                showToast(`Rekap ${labelOf(lastKey)}: masuk ${formatRupiah(inSum)}, keluar ${formatRupiah(outSum)}, laba ${formatRupiah(net)}`, 'info');
+            }
+            localStorage.setItem('ft_last_month', nowKey);
+        }
+
+        // ===== Pembaca Buku (Psychology of Money) =====
+        const openBookBtn = document.getElementById('open-book');
+        const bookModal = document.getElementById('book-modal');
+        const bookClose = document.getElementById('book-close');
+        const bookFrame = document.getElementById('book-frame');
+        const BOOK_URL = 'https://tiue.uz/wp-content/uploads/2024/02/The-Psychology-of-Money-Morgan-Housel.pdf#toolbar=1&view=FitH';
+        openBookBtn.addEventListener('click', () => {
+            // Muat PDF hanya saat dibuka, agar tidak memuat terus-menerus saat edit
+            if (!bookFrame.getAttribute('src')) bookFrame.setAttribute('src', BOOK_URL);
+            bookModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+        function closeBook() {
+            bookModal.classList.add('hidden');
+            document.body.style.overflow = '';
+            // Hentikan pemuatan ulang dengan membersihkan src saat ditutup
+            bookFrame.removeAttribute('src');
+        }
+        bookClose.addEventListener('click', closeBook);
+        bookModal.addEventListener('click', (e) => { if (e.target === bookModal) closeBook(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !bookModal.classList.contains('hidden')) closeBook(); });
+
+        // ===== Welcome Overlay =====
+        const welcomeOverlay = document.getElementById('welcome-overlay');
+        const welcomeEnter = document.getElementById('welcome-enter');
+        const welcomeSkip = document.getElementById('welcome-skip');
+
+        function showWelcome() {
+            welcomeOverlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        function hideWelcome() {
+            welcomeOverlay.classList.remove('show');
+            welcomeOverlay.classList.add('hide');
+            document.body.style.overflow = '';
+            setTimeout(() => welcomeOverlay.classList.remove('hide'), 400);
+        }
+        welcomeEnter.addEventListener('click', hideWelcome);
+        welcomeSkip.addEventListener('click', hideWelcome);
+        welcomeOverlay.addEventListener('click', (e) => { if (e.target === welcomeOverlay) hideWelcome(); });
+
+        // Tampilkan overlay setiap kali halaman dimuat (termasuk saat refresh)
+        window.addEventListener('load', showWelcome);
+
+        // ===== Scroll reveal (fade-in + slide-up via IntersectionObserver) =====
+        const revealEls = document.querySelectorAll('.reveal');
+        if ('IntersectionObserver' in window) {
+            const revealObserver = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        obs.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+            revealEls.forEach(el => revealObserver.observe(el));
+        } else {
+            revealEls.forEach(el => el.classList.add('is-visible'));
+        }
+
+        // ===== Kalkulator Tarok =====
+        const tarokTotal = document.getElementById('tarok-total');
+        const tarokPct = document.getElementById('tarok-pct');
+        const tarokResult = document.getElementById('tarok-result');
+        const tarokRemaining = document.getElementById('tarok-remaining');
+        const tarokBarTarok = document.getElementById('tarok-bar-tarok');
+        const tarokBarSisa = document.getElementById('tarok-bar-sisa');
+        const tarokRatio = document.getElementById('tarok-ratio');
+        const tarokUseIncome = document.getElementById('tarok-use-income');
+
+        // Auto-format nominal dengan pemisah ribuan
+        tarokTotal.addEventListener('input', function() {
+            const raw = this.value.replace(/[^\d]/g, '');
+            this.value = raw ? new Intl.NumberFormat('id-ID').format(Number(raw)) : '';
+            calcTarok();
+        });
+        // Format persen (izinkan desimal dengan koma/titik)
+        tarokPct.addEventListener('input', function() {
+            let raw = this.value.replace(/[^\d.,]/g, '').replace(',', '.');
+            this.value = raw;
+            calcTarok();
+        });
+
+        function calcTarok() {
+            const total = parseFloat(tarokTotal.value.replace(/[^\d]/g, '')) || 0;
+            const pct = parseFloat(tarokPct.value.replace(',', '.')) || 0;
+
+            if (total <= 0) {
+                tarokResult.textContent = formatRupiah(0);
+                tarokRemaining.textContent = formatRupiah(0);
+                tarokBarTarok.style.width = '0%';
+                tarokBarSisa.style.width = '0%';
+                tarokRatio.textContent = 'Masukkan jumlah uang untuk mulai menghitung.';
+                return;
+            }
+
+            const pctClamped = Math.max(0, Math.min(100, pct));
+            const tarok = total * (pctClamped / 100);
+            const sisa = total - tarok;
+
+            tarokResult.textContent = formatRupiah(tarok);
+            tarokRemaining.textContent = formatRupiah(sisa);
+
+            tarokBarTarok.style.width = pctClamped + '%';
+            tarokBarSisa.style.width = (100 - pctClamped) + '%';
+            tarokRatio.textContent = `${Math.round(pctClamped)}% ditarok • ${Math.round(100 - pctClamped)}% sisa`;
+        }
+
+        // Isi otomatis dengan total pemasukan saat ini
+        tarokUseIncome.addEventListener('click', () => {
+            const pemasukan = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+            tarokTotal.value = pemasukan ? new Intl.NumberFormat('id-ID').format(pemasukan) : '';
+            if (!tarokPct.value) tarokPct.value = '10';
+            calcTarok();
+            document.getElementById('tarok-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        // ===== Mode Gelap / Terang =====
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        function syncThemeIcon() {
+            themeIcon.className = document.documentElement.classList.contains('dark') ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+        syncThemeIcon();
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            try { localStorage.setItem('ft_theme', isDark ? 'dark' : 'light'); } catch(e) {}
+            syncThemeIcon();
+        });
+
+        // ===== Pengguna Aktif (simulasi) =====
+        const auCount = document.getElementById('au-count');
+        let activeUsers = 1 + Math.floor(Math.random() * 4); // 1-4 pengguna awal
+        auCount.textContent = activeUsers;
+        setInterval(() => {
+            // Fluktuasi kecil agar terkesan live
+            const delta = Math.random() < 0.5 ? -1 : 1;
+            activeUsers = Math.max(1, Math.min(12, activeUsers + delta));
+            auCount.textContent = activeUsers;
+        }, 4000);
+
+        // Inisialisasi
+        initChart();
+        // Muat transaksi dari API (dengan fallback localStorage), lalu render
+        loadTransactions().then(() => {
+            updateDashboard();
+            renderTransactions();
+            renderRecap();
+            checkMonthRollover();
+        });
+
+        // Otomatis arahkan ke bagian "Finansial track" setelah refresh
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        const topEl = document.getElementById('top');
+        if (topEl) topEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+        // ===== Notepad Harian =====
+        const notepadText = document.getElementById('notepad-text');
+        const notepadStatus = document.getElementById('notepad-status');
+        const notepadDateLabel = document.getElementById('notepad-date-label');
+        const notepadPrev = document.getElementById('notepad-prev');
+        const notepadNext = document.getElementById('notepad-next');
+        const notepadToday = document.getElementById('notepad-today');
+        const notepadClear = document.getElementById('notepad-clear');
+
+        // Tanggal aktif (default hari ini), format YYYY-MM-DD
+        let notepadDate = new Date().toISOString().split('T')[0];
+
+        function notepadKey(dateStr) { return 'ft_notepad_' + dateStr; }
+
+        function formatNotepadDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+            const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            return hari[d.getDay()] + ', ' + d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
+        }
+
+        function loadNotepad() {
+            notepadDateLabel.textContent = formatNotepadDate(notepadDate);
+            notepadText.value = localStorage.getItem(notepadKey(notepadDate)) || '';
+            notepadStatus.innerHTML = '<i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i>Tersimpan';
+        }
+
+        let notepadTimer;
+        notepadText.addEventListener('input', () => {
+            notepadStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1 text-indigo-500"></i>Menyimpan…';
+            clearTimeout(notepadTimer);
+            notepadTimer = setTimeout(() => {
+                localStorage.setItem(notepadKey(notepadDate), notepadText.value);
+                notepadStatus.innerHTML = '<i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i>Tersimpan';
+            }, 400);
+        });
+
+        function shiftNotepad(days) {
+            const d = new Date(notepadDate + 'T00:00:00');
+            d.setDate(d.getDate() + days);
+            notepadDate = d.toISOString().split('T')[0];
+            loadNotepad();
+        }
+        notepadPrev.addEventListener('click', () => shiftNotepad(-1));
+        notepadNext.addEventListener('click', () => shiftNotepad(1));
+        notepadToday.addEventListener('click', () => {
+            notepadDate = new Date().toISOString().split('T')[0];
+            loadNotepad();
+        });
+        notepadClear.addEventListener('click', () => {
+            if (confirm('Hapus catatan untuk ' + formatNotepadDate(notepadDate) + '?')) {
+                localStorage.removeItem(notepadKey(notepadDate));
+                notepadText.value = '';
+                notepadStatus.innerHTML = '<i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i>Tersimpan';
+            }
+        });
+
+        loadNotepad();
+
+        // ===== Kalkulator Kebutuhan Kalori (Mifflin-St Jeor) =====
+        const calGender = document.getElementById('cal-gender');
+        const calGenderSeg = document.getElementById('cal-gender-seg');
+        const calAge = document.getElementById('cal-age');
+        const calWeight = document.getElementById('cal-weight');
+        const calHeight = document.getElementById('cal-height');
+        const calActivity = document.getElementById('cal-activity');
+        const calGoal = document.getElementById('cal-goal');
+        const calForm = document.getElementById('calorie-form');
+        const calResult = document.getElementById('cal-result');
+        const calEmpty = document.getElementById('cal-empty');
+        const calBmr = document.getElementById('cal-bmr');
+        const calTdee = document.getElementById('cal-tdee');
+        const calTarget = document.getElementById('cal-target');
+
+        // Toggle jenis kelamin (segmented)
+        calGenderSeg.querySelectorAll('.seg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                calGenderSeg.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active-in', 'active-out'));
+                btn.classList.add('active-in');
+                calGender.value = btn.dataset.value;
+            });
+        });
+
+        // Format angka desimal (titik/koma)
+        [calAge, calWeight, calHeight].forEach(inp => {
+            inp.addEventListener('input', function() {
+                this.value = this.value.replace(/[^\d.,]/g, '').replace(',', '.');
+            });
+        });
+
+        calForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const gender = calGender.value;
+            const age = parseFloat(calAge.value);
+            const weight = parseFloat(calWeight.value);
+            const height = parseFloat(calHeight.value);
+            const activity = parseFloat(calActivity.value);
+            const goal = calGoal.value;
+
+            if (!age || !weight || !height || age <= 0 || weight <= 0 || height <= 0) {
+                showToast('Isi usia, berat, dan tinggi dengan benar', 'danger');
+                return;
+            }
+
+            // Rumus Mifflin-St Jeor
+            let bmr = 10 * weight + 6.25 * height - 5 * age;
+            bmr += (gender === 'Laki-laki') ? 5 : -161;
+
+            const tdee = bmr * activity;
+
+            let target = tdee;
+            if (goal === 'cut') target = tdee * 0.85;
+            else if (goal === 'bulk') target = tdee * 1.15;
+
+            calBmr.textContent = Math.round(bmr).toLocaleString('id-ID') + ' kcal';
+            calTdee.textContent = Math.round(tdee).toLocaleString('id-ID') + ' kcal';
+            calTarget.textContent = Math.round(target).toLocaleString('id-ID') + ' kcal';
+
+            calEmpty.classList.add('hidden');
+            calResult.classList.remove('hidden');
+        });
+    </script>
+</body>
+</html>
