@@ -17,6 +17,8 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
+    <!-- Google Identity Services (login Google asli) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -1527,19 +1529,68 @@
             }
         }
 
-        // Simulasi login Google (ganti dengan Google Identity Services untuk produksi)
-        loginBtn.addEventListener('click', () => {
-            // Contoh akun demo — di produksi, ganti dengan respons dari Google OAuth.
-            const demoUser = {
-                name: 'Budi Santoso',
-                email: 'budi.santoso@gmail.com',
-                picture: '' // isi dengan URL foto Google bila ada
+        // ===== Login Google ASLI via Google Identity Services (GIS) =====
+        // Ganti dengan Client ID Anda dari Google Cloud Console.
+        // Buat: https://console.cloud.google.com/ > APIs & Services > Credentials >
+        // OAuth 2.0 Client ID (type: Web application). Tambahkan origin URL aplikasi
+        // ini ke "Authorized JavaScript origins".
+        const GOOGLE_CLIENT_ID = 'GANTI_DENGAN_CLIENT_ID_ANDA.apps.googleusercontent.com';
+
+        // Decode payload JWT (id_token) dari Google tanpa library ekstra.
+        function parseJwt(token) {
+            try {
+                const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                const json = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(json);
+            } catch (e) { return null; }
+        }
+
+        function handleCredentialResponse(response) {
+            const payload = parseJwt(response.credential);
+            if (!payload) {
+                showToast('Gagal memverifikasi akun Google', 'error');
+                return;
+            }
+            const user = {
+                name: payload.name || payload.email || 'Pengguna',
+                email: payload.email || '',
+                picture: payload.picture || ''
             };
-            localStorage.setItem('ft_user', JSON.stringify(demoUser));
+            localStorage.setItem('ft_user', JSON.stringify(user));
             renderProfile();
-            notifyLogin(demoUser);
-            showToast('Berhasil masuk sebagai ' + demoUser.name, 'success');
-        });
+            notifyLogin(user);
+            showToast('Berhasil masuk sebagai ' + user.name, 'success');
+        }
+
+        function initGoogleLogin() {
+            if (typeof google === 'undefined' || !google.accounts) {
+                // Library belum dimuat; coba lagi sebentar lagi.
+                setTimeout(initGoogleLogin, 300);
+                return;
+            }
+            if (GOOGLE_CLIENT_ID.indexOf('GANTI_DENGAN') === 0) {
+                console.warn('GOOGLE_CLIENT_ID belum diisi — login Google tidak aktif.');
+                return;
+            }
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleCredentialResponse
+            });
+            // Klik tombol "Masuk dengan Google" membuka prompt login Google.
+            loginBtn.addEventListener('click', () => {
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // Fallback: tampilkan satu klik (One Tap) gagal, buka prompt manual.
+                        google.accounts.id.renderButton(loginBtn, { theme: 'outline', size: 'large' });
+                    }
+                });
+            });
+            // Coba tampilkan One Tap otomatis bila pengguna sudah pernah login.
+            google.accounts.id.prompt();
+        }
+        initGoogleLogin();
 
         avatarBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1571,6 +1622,12 @@
             localStorage.removeItem('ft_user');
             profileMenu.classList.add('hidden');
             document.getElementById('menu-backdrop').classList.add('hidden');
+            // Reset sesi Google agar One Tap tidak langsung login kembali.
+            try {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                    google.accounts.id.disableAutoSelect();
+                }
+            } catch (e) {}
             renderProfile();
             showToast('Anda telah keluar', 'info');
         });
