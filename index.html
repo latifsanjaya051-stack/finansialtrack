@@ -2203,7 +2203,7 @@
                 
                 // Kirim ke Google Apps Script endpoint
                 if (NOTIFY_ENDPOINT) {
-                    await fetch(NOTIFY_ENDPOINT, {
+                    const resp = await fetch(NOTIFY_ENDPOINT, {
                         method: 'POST',
                         mode: 'cors',
                         headers: { 'Content-Type': 'application/json' },
@@ -2216,11 +2216,21 @@
                             rawData: JSON.stringify(data) // Data JSON mentah sebagai lampiran
                         })
                     });
+
+                    // Pastikan server benar-benar mengirim email
+                    let respJson = null;
+                    try { respJson = await resp.json(); } catch (_) {}
+                    if (!resp.ok || (respJson && respJson.ok === false)) {
+                        const errMsg = (respJson && respJson.error) || ('HTTP ' + resp.status);
+                        throw new Error('Server: ' + errMsg);
+                    }
+                } else {
+                    throw new Error('NOTIFY_ENDPOINT belum dikonfigurasi');
                 }
-                
+
                 // Simpan timestamp backup terakhir
                 localStorage.setItem('ft_last_backup', new Date().toISOString());
-                
+
                 if (showNotif) {
                     showToast('✅ Backup berhasil dikirim ke ' + BACKUP_EMAIL, 'success');
                 }
@@ -2228,7 +2238,7 @@
             } catch (e) {
                 console.error('Gagal backup:', e);
                 if (showNotif) {
-                    showToast('Gagal mengirim backup. Coba lagi.', 'danger');
+                    showToast('Gagal mengirim backup: ' + e.message, 'danger');
                 }
                 return false;
             }
