@@ -43,6 +43,38 @@ function doPost(e) {
       'User-Agent    : ' + (data.ua || '-') + '\n\n' +
       'Pesan otomatis dari sistem notifikasi login.';
 
+    // === Branch: backup data finansial ke email ===
+    if (data.action === 'backup') {
+      const backupTo = (data.to && String(data.to)) || ADMIN_EMAIL;
+      const backupSubject = data.subject || ('Backup Data Finansial Track — ' + waktuLokal);
+      const backupHtml = data.html || '';
+      const rawData = data.rawData || '';
+
+      // Kirim email HTML berisi ringkasan
+      MailApp.sendEmail({
+        to: backupTo,
+        subject: backupSubject,
+        htmlBody: backupHtml,
+        body: 'Backup data finansial terlampir. Lihat versi HTML untuk tampilan lengkap.\n\n' +
+              'Data mentah (JSON):\n' + rawData
+      });
+
+      // Lampirkan JSON mentah sebagai file jika tersedia
+      if (rawData) {
+        const blob = Utilities.newBlob(rawData, 'application/json', 'backup-data.json');
+        MailApp.sendEmail({
+          to: backupTo,
+          subject: backupSubject + ' (lampiran)',
+          body: 'Lampiran JSON data backup.',
+          attachments: [blob]
+        });
+      }
+
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true, action: 'backup' })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
     MailApp.sendEmail({
       to: ADMIN_EMAIL,
       subject: subject,
