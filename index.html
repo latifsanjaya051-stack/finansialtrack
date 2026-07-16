@@ -16,8 +16,6 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
-    <!-- Google Identity Services (login Google asli) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -659,6 +657,31 @@
         html.dark .bio-divider::before, html.dark .bio-divider::after { background: #334155; }
         html.dark .bio-btn-outline { border-color: #334155; color: #818cf8; }
         html.dark .bio-btn-outline:hover { border-color: #818cf8; background: rgba(99,102,241,.1); }
+
+        /* ===== Preview resolusi (tanpa frame device) ===== */
+        body.iphone-mode {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 0;
+            background:
+                linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+        }
+        html.dark body.iphone-mode {
+            background:
+                linear-gradient(180deg, #0f172a 0%, #020617 100%);
+        }
+        body.iphone-mode .iphone-content {
+            width: 100%;
+            max-width: 420px;       /* lebar layar iPhone 16/17 Pro */
+            min-height: 100vh;
+            margin: 0 auto;
+            background: #f1f5f9;
+            padding: 16px 16px 24px 16px;
+        }
+        html.dark body.iphone-mode .iphone-content { background: #0f172a; }
+        body.iphone-mode .iphone-content::-webkit-scrollbar { width: 0; }
     </style>
 </head>
 <body class="font-sans antialiased min-h-screen text-slate-800">
@@ -751,6 +774,9 @@
             </div>
         </div>
     </div>
+
+    <!-- ===== Preview Wrapper (resolusi 420px) ===== -->
+    <div class="iphone-content" id="iphone-content">
 
     <!-- Floating active users (top-left) -->
     <div class="active-users" id="active-users" title="Pengguna yang sedang aktif">
@@ -2251,7 +2277,7 @@
             }, 3000); // Delay 3 detik setelah login
         }
 
-        // Simulasi login Google (ganti dengan Google Identity Services untuk produksi)
+        // Login biometrik (WebAuthn: sidik jari / wajah / device PIN)
         loginBtn.addEventListener('click', () => {
             showBioOverlay();
         });
@@ -2988,5 +3014,6 @@
             calResult.classList.remove('hidden');
         });
     </script>
+            </div><!-- /.iphone-content -->
 </body>
 </html>
