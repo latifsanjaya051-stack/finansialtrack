@@ -9,8 +9,7 @@
     <script>
         (function() {
             try {
-                var t = localStorage.getItem('ft_theme');
-                if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                var t = localStorage.getItem('ft_theme') || 'light';
                 if (t === 'dark') document.documentElement.classList.add('dark');
             } catch(e) {}
         })();
@@ -502,6 +501,164 @@
         html.dark .welcome-card { background: #1e293b; box-shadow: 0 30px 70px -20px rgba(0,0,0,.7); }
         html.dark .welcome-feature { background: #0f172a; border-color: #334155; color: #cbd5e1; }
         html.dark .welcome-skip { color: #64748b; }
+
+        /* ===== Biometric Login ===== */
+        #bio-login-overlay {
+            position: fixed; inset: 0; z-index: 90;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.25rem;
+            background: rgba(15,23,42,.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            opacity: 0; visibility: hidden;
+            transition: opacity .4s ease, visibility .4s ease;
+        }
+        #bio-login-overlay.show { opacity: 1; visibility: visible; }
+
+        .bio-card {
+            position: relative;
+            width: 100%; max-width: 400px;
+            background: #fff;
+            border-radius: 24px;
+            padding: 2.5rem 2rem 2rem;
+            text-align: center;
+            box-shadow: 0 30px 70px -20px rgba(15,23,42,.5);
+            transform: translateY(24px) scale(.96);
+            opacity: 0;
+            transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .5s ease;
+        }
+        #bio-login-overlay.show .bio-card { transform: translateY(0) scale(1); opacity: 1; }
+
+        .bio-icon-wrap {
+            width: 88px; height: 88px; margin: 0 auto 1.25rem;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 26px; font-size: 2.2rem; color: #fff;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            box-shadow: 0 16px 40px -10px rgba(99,102,241,.65);
+            animation: bioPop .6s cubic-bezier(.2,.8,.2,1) both;
+            position: relative;
+        }
+        @keyframes bioPop {
+            from { transform: scale(.3) rotate(-15deg); opacity: 0; }
+            to   { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        .bio-icon-wrap.scanning::after {
+            content: "";
+            position: absolute; inset: -8px;
+            border: 3px solid rgba(99,102,241,.4);
+            border-radius: 32px;
+            animation: bioPulseRing 1.4s ease-in-out infinite;
+        }
+        @keyframes bioPulseRing {
+            0%   { transform: scale(.95); opacity: .6; }
+            50%  { transform: scale(1.08); opacity: 0; }
+            100% { transform: scale(.95); opacity: 0; }
+        }
+        .bio-icon-wrap.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .bio-icon-wrap.error   { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+
+        .bio-title {
+            font-size: 1.25rem; font-weight: 800; color: #0f172a;
+            letter-spacing: -.02em; margin-bottom: .35rem;
+        }
+        .bio-subtitle {
+            font-size: .85rem; color: #64748b; line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+        .bio-subtitle strong { color: #4f46e5; }
+
+        .bio-btn {
+            width: 100%; padding: .9rem; border-radius: 16px; border: none; cursor: pointer;
+            font-weight: 700; font-size: .95rem; color: #fff;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: transform .15s ease, box-shadow .2s ease, opacity .2s ease;
+        }
+        .bio-btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            box-shadow: 0 12px 26px -10px rgba(99,102,241,.7);
+        }
+        .bio-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 16px 32px -10px rgba(99,102,241,.8); }
+        .bio-btn-primary:active { transform: scale(.98); }
+        .bio-btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+        .bio-btn-outline {
+            background: transparent; color: #6366f1;
+            border: 2px solid #e2e8f0;
+            box-shadow: none; margin-top: .75rem;
+        }
+        .bio-btn-outline:hover { border-color: #6366f1; background: rgba(99,102,241,.05); }
+
+        .bio-divider {
+            display: flex; align-items: center; gap: 12px; margin: 1rem 0;
+            color: #94a3b8; font-size: .75rem; font-weight: 600;
+        }
+        .bio-divider::before, .bio-divider::after {
+            content: ""; flex: 1; height: 1px; background: #e2e8f0;
+        }
+
+        .bio-device-info {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            font-size: .75rem; color: #94a3b8; margin-top: 1rem;
+        }
+        .bio-device-info .bio-dot {
+            width: 8px; height: 8px; border-radius: 999px;
+        }
+        .bio-device-info .bio-dot.yes { background: #10b981; }
+        .bio-device-info .bio-dot.no  { background: #f43f5e; }
+
+        .bio-step { display: none; }
+        .bio-step.active { display: block; }
+
+        .bio-input-wrap {
+            position: relative; margin-bottom: 1rem; text-align: left;
+        }
+        .bio-input-wrap input {
+            width: 100%; border: 2px solid #e2e8f0; background: #f8fafc;
+            border-radius: 14px; padding: 16px 16px 16px 44px;
+            font-size: .95rem; color: #0f172a;
+            transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+        }
+        .bio-input-wrap input:focus {
+            outline: none; border-color: #6366f1; background: #fff;
+            box-shadow: 0 0 0 4px rgba(99,102,241,.15);
+        }
+        .bio-input-wrap .bio-input-icon {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: #94a3b8; font-size: .85rem; pointer-events: none;
+        }
+        .bio-input-wrap input:focus ~ .bio-input-icon { color: #6366f1; }
+
+        .bio-error-msg {
+            font-size: .8rem; color: #e11d48; text-align: left;
+            margin-top: -.5rem; margin-bottom: .75rem; display: none;
+        }
+        .bio-error-msg.show { display: block; }
+
+        .bio-features { display: grid; gap: .5rem; margin: 1rem 0; text-align: left; }
+        .bio-feature {
+            display: flex; align-items: center; gap: .6rem;
+            background: #f8fafc; border: 1px solid #eef2f7;
+            padding: .55rem .75rem; border-radius: 12px; font-size: .8rem; color: #475569;
+        }
+        .bio-feature i { color: #6366f1; width: 16px; text-align: center; font-size: .75rem; }
+
+        .bio-spinner {
+            display: inline-block; width: 20px; height: 20px;
+            border: 2.5px solid rgba(255,255,255,.3);
+            border-top-color: #fff; border-radius: 999px;
+            animation: bioSpin .7s linear infinite;
+        }
+        @keyframes bioSpin { to { transform: rotate(360deg); } }
+
+        html.dark .bio-card { background: #1e293b; box-shadow: 0 30px 70px -20px rgba(0,0,0,.7); }
+        html.dark .bio-title { color: #e2e8f0; }
+        html.dark .bio-subtitle { color: #94a3b8; }
+        html.dark .bio-input-wrap input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+        html.dark .bio-input-wrap input:focus { background: #1e293b; }
+        html.dark .bio-feature { background: #0f172a; border-color: #334155; color: #cbd5e1; }
+        html.dark .bio-divider::before, html.dark .bio-divider::after { background: #334155; }
+        html.dark .bio-btn-outline { border-color: #334155; color: #818cf8; }
+        html.dark .bio-btn-outline:hover { border-color: #818cf8; background: rgba(99,102,241,.1); }
     </style>
 </head>
 <body class="font-sans antialiased min-h-screen text-slate-800">
@@ -525,6 +682,76 @@
         </div>
     </div>
 
+    <!-- ===== Biometric Login Overlay ===== -->
+    <div id="bio-login-overlay" role="dialog" aria-modal="true" aria-label="Login Biometrik">
+        <div class="bio-card">
+            <!-- Step 1: Auth / Register -->
+            <div class="bio-step active" id="bio-step-auth">
+                <div class="bio-icon-wrap" id="bio-icon">
+                    <i class="fa-solid fa-fingerprint"></i>
+                </div>
+                <h2 class="bio-title" id="bio-title">Masuk dengan Biometrik</h2>
+                <p class="bio-subtitle" id="bio-subtitle">
+                    Gunakan <strong>sidik jari</strong> atau <strong>wajah</strong> di perangkat Anda untuk masuk secara aman.
+                </p>
+
+                <div class="bio-device-info" id="bio-device-info">
+                    <span class="bio-dot" id="bio-dot"></span>
+                    <span id="bio-device-text">Memeriksa dukungan…</span>
+                </div>
+
+                <div class="bio-features" id="bio-features-list">
+                    <div class="bio-feature"><i class="fa-solid fa-shield-halved"></i> Sidik jari atau Face ID</div>
+                    <div class="bio-feature"><i class="fa-solid fa-bolt"></i> Cepat & tanpa password</div>
+                    <div class="bio-feature"><i class="fa-solid fa-lock"></i> Tersimpan lokal di perangkat</div>
+                </div>
+
+                <button class="bio-btn bio-btn-primary" id="bio-main-btn" disabled>
+                    <i class="fa-solid fa-fingerprint"></i>
+                    <span id="bio-btn-text">Verifikasi Sekarang</span>
+                </button>
+
+                <div class="bio-error-msg" id="bio-error"></div>
+
+                <p style="font-size:.75rem;color:#94a3b8;margin-top:1rem;">
+                    <i class="fa-solid fa-info-circle mr-1"></i>
+                    Data tidak dikirim ke server manapun.
+                </p>
+            </div>
+
+            <!-- Step 2: Registration (first time) -->
+            <div class="bio-step" id="bio-step-register">
+                <div class="bio-icon-wrap" id="bio-reg-icon">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <h2 class="bio-title">Daftar Akun Baru</h2>
+                <p class="bio-subtitle">Masukkan nama Anda lalu verifikasi dengan biometrik untuk pertama kali.</p>
+
+                <div class="bio-input-wrap">
+                    <input type="text" id="bio-name-input" placeholder="Masukkan nama Anda" autocomplete="name">
+                    <i class="fa-solid fa-user bio-input-icon"></i>
+                </div>
+                <div class="bio-error-msg" id="bio-reg-error"></div>
+
+                <button class="bio-btn bio-btn-primary" id="bio-register-btn">
+                    <i class="fa-solid fa-fingerprint"></i> Daftar & Verifikasi
+                </button>
+                <button class="bio-btn bio-btn-outline" id="bio-back-btn">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali
+                </button>
+            </div>
+
+            <!-- Step 3: Success -->
+            <div class="bio-step" id="bio-step-success">
+                <div class="bio-icon-wrap success">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h2 class="bio-title" style="color:#059669;">Berhasil Masuk!</h2>
+                <p class="bio-subtitle">Selamat datang kembali, <strong id="bio-welcome-name">Pengguna</strong>!</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Floating active users (top-left) -->
     <div class="active-users" id="active-users" title="Pengguna yang sedang aktif">
         <span class="au-dot"></span>
@@ -541,17 +768,12 @@
                 <i class="fa-solid fa-moon" id="theme-icon"></i>
             </button>
             <div class="profile-wrap" id="profile-wrap">
-                <!-- Logged out: Google login button -->
-                <button class="profile-btn" id="login-btn">
-                    <span class="g-ico">
-                        <svg viewBox="0 0 48 48" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                        </svg>
+                <!-- Logged out: Biometric login button -->
+                <button class="profile-btn" id="login-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(99,102,241,.6);">
+                    <span class="g-ico" style="background:rgba(255,255,255,.2);">
+                        <i class="fa-solid fa-fingerprint" style="color:#fff;font-size:14px;"></i>
                     </span>
-                    Masuk dengan Google
+                    Masuk dengan Biometrik
                 </button>
 
                 <!-- Logged in: avatar + dropdown -->
@@ -567,6 +789,10 @@
                         </div>
                         <button class="pm-item" id="pm-edit"><i class="fa-solid fa-user-pen"></i> Edit Profil</button>
                         <button class="pm-item" id="pm-sync"><i class="fa-solid fa-rotate"></i> Sinkronkan Data</button>
+                        <button class="pm-item" id="pm-backup" style="color:#6366f1;">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Backup ke Email
+                            <span style="margin-left:auto;font-size:.65rem;background:#6366f1;color:#fff;padding:2px 6px;border-radius:999px;">Gmail</span>
+                        </button>
                         <button class="pm-item danger" id="pm-logout"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
                     </div>
                 </div>
@@ -1116,7 +1342,7 @@
     <script>
         // Mengambil data dari localStorage jika ada, atau membuat array kosong
         // ===== Konfigurasi API (ganti API_BASE_URL dengan URL backend Anda) =====
-        const API_BASE_URL = 'https://api.example.com'; // <-- sesuaikan dengan backend Anda
+        const API_BASE_URL = 'ttp://localhost:3000'; // <-- sesuaikan dengan backend Anda
         const API_ENDPOINTS = {
             list:   () => `${API_BASE_URL}/api/transactions`,
             create: () => `${API_BASE_URL}/api/transactions`,
@@ -1464,7 +1690,7 @@
         updateClock();
         setInterval(updateClock, 1000);
 
-        // ===== Profil & Login Google =====
+        // ===== Profil & Login Biometrik (WebAuthn) =====
         const loginBtn = document.getElementById('login-btn');
         const profileLogged = document.getElementById('profile-logged');
         const avatarBtn = document.getElementById('avatar-btn');
@@ -1474,6 +1700,327 @@
         const pmEmail = document.getElementById('pm-email');
         const pmLogout = document.getElementById('pm-logout');
         const pmSync = document.getElementById('pm-sync');
+
+        // Biometric elements
+        const bioOverlay = document.getElementById('bio-login-overlay');
+        const bioIcon = document.getElementById('bio-icon');
+        const bioTitle = document.getElementById('bio-title');
+        const bioSubtitle = document.getElementById('bio-subtitle');
+        const bioMainBtn = document.getElementById('bio-main-btn');
+        const bioBtnText = document.getElementById('bio-btn-text');
+        const bioError = document.getElementById('bio-error');
+        const bioDeviceInfo = document.getElementById('bio-device-info');
+        const bioDot = document.getElementById('bio-dot');
+        const bioDeviceText = document.getElementById('bio-device-text');
+        const bioFeaturesList = document.getElementById('bio-features-list');
+        const bioStepAuth = document.getElementById('bio-step-auth');
+        const bioStepRegister = document.getElementById('bio-step-register');
+        const bioStepSuccess = document.getElementById('bio-step-success');
+        const bioRegIcon = document.getElementById('bio-reg-icon');
+        const bioRegError = document.getElementById('bio-reg-error');
+        const bioNameInput = document.getElementById('bio-name-input');
+        const bioRegisterBtn = document.getElementById('bio-register-btn');
+        const bioBackBtn = document.getElementById('bio-back-btn');
+        const bioWelcomeName = document.getElementById('bio-welcome-name');
+
+        // ===== WebAuthn Helper Functions =====
+
+        // Generate a random buffer for challenge
+        function generateChallenge() {
+            const arr = new Uint8Array(32);
+            crypto.getRandomValues(arr);
+            return arr;
+        }
+
+        // ArrayBuffer to Base64 string
+        function bufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // Base64 string to ArrayBuffer
+        function base64ToBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Generate a unique user ID
+        function generateUserId() {
+            const arr = new Uint8Array(16);
+            crypto.getRandomValues(arr);
+            return bufferToBase64(arr);
+        }
+
+        // Get or create relying party ID (RP ID) - for local use, use origin
+        function getRpId() {
+            return window.location.hostname || 'localhost';
+        }
+
+        // Register a new WebAuthn credential
+        async function registerBiometric(username) {
+            const rpName = 'Finansial Track';
+            const rpId = getRpId();
+            const challenge = generateChallenge();
+            const userId = generateUserId();
+
+            const createOptions = {
+                publicKey: {
+                    challenge: challenge,
+                    rp: {
+                        name: rpName,
+                        id: rpId
+                    },
+                    user: {
+                        id: new TextEncoder().encode(userId),
+                        name: username.toLowerCase().replace(/\s+/g, '') + '@fintrack.local',
+                        displayName: username
+                    },
+                    pubKeyCredParams: [
+                        { alg: -7, type: 'public-key' },   // ES256
+                        { alg: -257, type: 'public-key' }  // RS256
+                    ],
+                    authenticatorSelection: {
+                        authenticatorAttachment: 'platform', // Use device biometric
+                        userVerification: 'required',
+                        residentKey: 'preferred'
+                    },
+                    timeout: 60000,
+                    attestation: 'none'
+                }
+            };
+
+            try {
+                const credential = await navigator.credentials.create(createOptions);
+                // Store credential info locally
+                const credData = {
+                    credentialId: bufferToBase64(credential.rawId),
+                    counter: credential.response.getAuthenticatorData().slice(-4).reduce((acc, b, i) => acc + b << (i * 8), 0),
+                    username: username,
+                    userId: userId,
+                    createdAt: new Date().toISOString()
+                };
+                localStorage.setItem('ft_bio_credential', JSON.stringify(credData));
+                return credData;
+            } catch (err) {
+                console.error('Registration error:', err);
+                throw err;
+            }
+        }
+
+        // Authenticate with existing credential
+        async function authenticateBiometric() {
+            const credData = JSON.parse(localStorage.getItem('ft_bio_credential'));
+            if (!credData) throw new Error('Tidak ada kredensial biometrik terdaftar');
+
+            const rpId = getRpId();
+            const challenge = generateChallenge();
+
+            const getOptions = {
+                publicKey: {
+                    challenge: challenge,
+                    rpId: rpId,
+                    allowCredentials: [{
+                        id: base64ToBuffer(credData.credentialId),
+                        type: 'public-key',
+                        transports: ['internal']
+                    }],
+                    userVerification: 'required',
+                    timeout: 60000
+                }
+            };
+
+            try {
+                const assertion = await navigator.credentials.get(getOptions);
+                // If we reach here, biometric verification succeeded
+                // Update counter
+                credData.counter = credData.counter + 1;
+                localStorage.setItem('ft_bio_credential', JSON.stringify(credData));
+                return credData;
+            } catch (err) {
+                console.error('Authentication error:', err);
+                throw err;
+            }
+        }
+
+        // Check WebAuthn support
+        function checkBioSupport() {
+            if (!window.PublicKeyCredential) {
+                return { supported: false, message: 'Browser tidak mendukung WebAuthn' };
+            }
+            return { supported: true, message: 'Biometrik tersedia' };
+        }
+
+        // ===== Bio Login Flow =====
+        function showBioStep(step) {
+            bioStepAuth.classList.remove('active');
+            bioStepRegister.classList.remove('active');
+            bioStepSuccess.classList.remove('active');
+            step.classList.add('active');
+        }
+
+        function showBioOverlay() {
+            bioOverlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            bioError.classList.remove('show');
+            bioRegError.classList.remove('show');
+
+            const support = checkBioSupport();
+            const hasCred = !!localStorage.getItem('ft_bio_credential');
+
+            if (!support.supported) {
+                bioDot.classList.remove('yes');
+                bioDot.classList.add('no');
+                bioDeviceText.textContent = support.message;
+                bioMainBtn.disabled = true;
+                bioBtnText.textContent = 'Tidak Didukung';
+                bioFeaturesList.innerHTML = '<div class="bio-feature" style="color:#e11d48;"><i class="fa-solid fa-circle-exclamation"></i> Perangkat/browser tidak mendukung autentikasi biometrik</div>';
+                return;
+            }
+
+            bioDot.classList.add('yes');
+            bioDot.classList.remove('no');
+            bioDeviceText.textContent = 'Biometrik tersedia di perangkat ini';
+            bioMainBtn.disabled = false;
+
+            if (hasCred) {
+                // User has registered before
+                const cred = JSON.parse(localStorage.getItem('ft_bio_credential'));
+                bioTitle.textContent = 'Masuk dengan Biometrik';
+                bioSubtitle.innerHTML = 'Halo <strong>' + (cred.username || 'Pengguna') + '</strong>! Verifikasi sidik jari atau wajah Anda untuk masuk.';
+                bioBtnText.textContent = 'Verifikasi Sekarang';
+                bioIcon.innerHTML = '<i class="fa-solid fa-fingerprint"></i>';
+                bioIcon.classList.remove('scanning', 'success', 'error');
+            } else {
+                // First time - need registration
+                bioTitle.textContent = 'Selamat Datang!';
+                bioSubtitle.innerHTML = 'Anda belum terdaftar. Ketik nama Anda lalu verifikasi dengan <strong>sidik jari</strong> atau <strong>wajah</strong>.';
+                bioBtnText.textContent = 'Daftar Sekarang';
+                bioIcon.innerHTML = '<i class="fa-solid fa-fingerprint"></i>';
+                bioIcon.classList.remove('scanning', 'success', 'error');
+            }
+
+            showBioStep(bioStepAuth);
+        }
+
+        function hideBioOverlay() {
+            bioOverlay.classList.remove('show');
+            document.body.style.overflow = '';
+            bioIcon.classList.remove('scanning', 'success', 'error');
+        }
+
+        // Main bio button click
+        bioMainBtn.addEventListener('click', async () => {
+            const hasCred = !!localStorage.getItem('ft_bio_credential');
+
+            if (!hasCred) {
+                // Go to registration step
+                showBioStep(bioStepRegister);
+                bioNameInput.focus();
+                return;
+            }
+
+            // Authenticate
+            bioMainBtn.disabled = true;
+            bioBtnText.innerHTML = '<span class="bio-spinner"></span> Memverifikasi…';
+            bioIcon.classList.add('scanning');
+            bioIcon.innerHTML = '<i class="fa-solid fa-fingerprint"></i>';
+            bioError.classList.remove('show');
+
+            try {
+                const cred = await authenticateBiometric();
+                bioIcon.classList.remove('scanning');
+                bioIcon.classList.add('success');
+                bioIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
+                bioTitle.textContent = 'Berhasil Masuk!';
+                bioTitle.style.color = '#059669';
+                bioSubtitle.innerHTML = 'Selamat datang kembali, <strong>' + (cred.username || 'Pengguna') + '</strong>!';
+
+                const user = { name: cred.username, email: cred.username.toLowerCase().replace(/\s+/g, '') + '@fintrack.local', picture: '' };
+                localStorage.setItem('ft_user', JSON.stringify(user));
+                notifyLogin(user);
+                autoBackupOnLogin(user); // Auto backup ke email
+
+                setTimeout(() => {
+                    hideBioOverlay();
+                    renderProfile();
+                    showToast('Berhasil masuk sebagai ' + user.name, 'success');
+                    bioTitle.style.color = '';
+                }, 1200);
+            } catch (err) {
+                bioIcon.classList.remove('scanning');
+                bioIcon.classList.add('error');
+                bioIcon.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                bioError.textContent = 'Verifikasi gagal. Pastikan sidik jari/wajah terdeteksi dengan benar.';
+                bioError.classList.add('show');
+                bioMainBtn.disabled = false;
+                bioBtnText.textContent = 'Coba Lagi';
+                setTimeout(() => {
+                    bioIcon.classList.remove('error');
+                    bioIcon.innerHTML = '<i class="fa-solid fa-fingerprint"></i>';
+                }, 2000);
+            }
+        });
+
+        // Register button click
+        bioRegisterBtn.addEventListener('click', async () => {
+            const name = bioNameInput.value.trim();
+            if (!name) {
+                bioRegError.textContent = 'Masukkan nama Anda terlebih dahulu';
+                bioRegError.classList.add('show');
+                return;
+            }
+            bioRegError.classList.remove('show');
+            bioRegisterBtn.disabled = true;
+            bioRegisterBtn.innerHTML = '<span class="bio-spinner"></span> Mendaftarkan…';
+            bioRegIcon.classList.add('scanning');
+
+            try {
+                const cred = await registerBiometric(name);
+                bioRegIcon.classList.remove('scanning');
+                bioRegIcon.classList.add('success');
+                bioRegIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
+
+                const user = { name: cred.username, email: cred.username.toLowerCase().replace(/\s+/g, '') + '@fintrack.local', picture: '' };
+                localStorage.setItem('ft_user', JSON.stringify(user));
+                notifyLogin(user);
+
+                bioWelcomeName.textContent = cred.username;
+                showBioStep(bioStepSuccess);
+
+                setTimeout(() => {
+                    hideBioOverlay();
+                    renderProfile();
+                    showToast('Akun berhasil dibuat! Selamat datang, ' + user.name, 'success');
+                    bioRegisterBtn.disabled = false;
+                    bioRegisterBtn.innerHTML = '<i class="fa-solid fa-fingerprint"></i> Daftar & Verifikasi';
+                }, 1500);
+            } catch (err) {
+                bioRegIcon.classList.remove('scanning');
+                bioRegError.textContent = 'Pendaftaran gagal. Pastikan sensor biometrik aktif.';
+                bioRegError.classList.add('show');
+                bioRegisterBtn.disabled = false;
+                bioRegisterBtn.innerHTML = '<i class="fa-solid fa-fingerprint"></i> Daftar & Verifikasi';
+            }
+        });
+
+        bioNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') bioRegisterBtn.click();
+        });
+
+        bioBackBtn.addEventListener('click', () => showBioStep(bioStepAuth));
+
+        // Close bio overlay on click outside
+        bioOverlay.addEventListener('click', (e) => {
+            if (e.target === bioOverlay) hideBioOverlay();
+        });
 
         function renderProfile() {
             const user = JSON.parse(localStorage.getItem('ft_user'));
@@ -1529,68 +2076,175 @@
             }
         }
 
-        // ===== Login Google ASLI via Google Identity Services (GIS) =====
-        // Ganti dengan Client ID Anda dari Google Cloud Console.
-        // Buat: https://console.cloud.google.com/ > APIs & Services > Credentials >
-        // OAuth 2.0 Client ID (type: Web application). Tambahkan origin URL aplikasi
-        // ini ke "Authorized JavaScript origins".
-        const GOOGLE_CLIENT_ID = 'GANTI_DENGAN_CLIENT_ID_ANDA.apps.googleusercontent.com';
+        // ===== Backup Data ke Email =====
+        const BACKUP_EMAIL = 'cas832545@gmail.com';
 
-        // Decode payload JWT (id_token) dari Google tanpa library ekstra.
-        function parseJwt(token) {
-            try {
-                const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-                const json = decodeURIComponent(atob(base64).split('').map(function(c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                return JSON.parse(json);
-            } catch (e) { return null; }
-        }
-
-        function handleCredentialResponse(response) {
-            const payload = parseJwt(response.credential);
-            if (!payload) {
-                showToast('Gagal memverifikasi akun Google', 'error');
-                return;
-            }
-            const user = {
-                name: payload.name || payload.email || 'Pengguna',
-                email: payload.email || '',
-                picture: payload.picture || ''
+        // Kumpulkan semua data dari localStorage
+        function collectAllData() {
+            const data = {
+                // Metadata
+                backupTime: new Date().toISOString(),
+                version: '1.0',
+                
+                // Profil user
+                profile: JSON.parse(localStorage.getItem('ft_user') || '{}'),
+                
+                // Transaksi
+                transactions: JSON.parse(localStorage.getItem('transactions') || '[]'),
+                
+                // Notepad (kumpulkan semua)
+                notepad: {},
+                
+                // Pengaturan
+                settings: {
+                    theme: localStorage.getItem('ft_theme') || 'light',
+                    lastMonth: localStorage.getItem('ft_last_month') || ''
+                }
             };
-            localStorage.setItem('ft_user', JSON.stringify(user));
-            renderProfile();
-            notifyLogin(user);
-            showToast('Berhasil masuk sebagai ' + user.name, 'success');
+            
+            // Kumpulkan semua data notepad
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('ft_notepad_')) {
+                    data.notepad[key] = localStorage.getItem(key);
+                }
+            }
+            
+            return data;
         }
 
-        function initGoogleLogin() {
-            if (typeof google === 'undefined' || !google.accounts) {
-                // Library belum dimuat; coba lagi sebentar lagi.
-                setTimeout(initGoogleLogin, 300);
-                return;
-            }
-            if (GOOGLE_CLIENT_ID.indexOf('GANTI_DENGAN') === 0) {
-                console.warn('GOOGLE_CLIENT_ID belum diisi — login Google tidak aktif.');
-                return;
-            }
-            google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleCredentialResponse
+        // Format data untuk email (HTML yang mudah dibaca)
+        function formatDataForEmail(data) {
+            const profile = data.profile || {};
+            const transactions = data.transactions || [];
+            const notepad = data.notepad || {};
+            
+            // Hitung total
+            const totalIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+            const totalOut = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+            const profit = totalIn - totalOut;
+            
+            let html = `
+                <h2>🔐 Backup Data Finansial Track</h2>
+                <p><strong>Waktu Backup:</strong> ${new Date(data.backupTime).toLocaleString('id-ID')}</p>
+                <hr>
+                
+                <h3>👤 Profil Pengguna</h3>
+                <ul>
+                    <li><strong>Nama:</strong> ${profile.name || '-'}</li>
+                    <li><strong>Email:</strong> ${profile.email || '-'}</li>
+                </ul>
+                
+                <h3>💰 Ringkasan Keuangan</h3>
+                <ul>
+                    <li><strong>Total Pemasukan:</strong> Rp ${totalIn.toLocaleString('id-ID')}</li>
+                    <li><strong>Total Pengeluaran:</strong> Rp ${totalOut.toLocaleString('id-ID')}</li>
+                    <li><strong>Laba/Rugi:</strong> Rp ${profit.toLocaleString('id-ID')}</li>
+                    <li><strong>Jumlah Transaksi:</strong> ${transactions.length}</li>
+                </ul>
+                
+                <h3>📊 Daftar Transaksi</h3>
+                <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%">
+                    <tr style="background:#f1f5f9">
+                        <th>Tanggal</th>
+                        <th>Keterangan</th>
+                        <th>Jenis</th>
+                        <th>Jumlah</th>
+                    </tr>`;
+            
+            // Sort by date descending
+            const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+            sorted.forEach(t => {
+                const isIncome = t.type === 'pemasukan';
+                const sign = isIncome ? '+' : '-';
+                const color = isIncome ? '#059669' : '#e11d48';
+                html += `
+                    <tr>
+                        <td>${new Date(t.date).toLocaleDateString('id-ID')}</td>
+                        <td>${t.description}</td>
+                        <td style="color:${color}">${t.type}</td>
+                        <td style="color:${color}">${sign} Rp ${t.amount.toLocaleString('id-ID')}</td>
+                    </tr>`;
             });
-            // Klik tombol "Masuk dengan Google" membuka prompt login Google.
-            loginBtn.addEventListener('click', () => {
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // Fallback: tampilkan satu klik (One Tap) gagal, buka prompt manual.
-                        google.accounts.id.renderButton(loginBtn, { theme: 'outline', size: 'large' });
+            
+            html += `</table>`;
+            
+            // Notepad
+            const notepadEntries = Object.entries(notepad);
+            if (notepadEntries.length > 0) {
+                html += `<h3>📝 Notepad Harian</h3>`;
+                notepadEntries.forEach(([key, value]) => {
+                    const date = key.replace('ft_notepad_', '');
+                    if (value && value.trim()) {
+                        html += `<p><strong>${date}:</strong><br>${value.replace(/\n/g, '<br>')}</p>`;
                     }
                 });
-            });
-            // Coba tampilkan One Tap otomatis bila pengguna sudah pernah login.
-            google.accounts.id.prompt();
+            }
+            
+            html += `
+                <hr>
+                <p style="color:#64748b;font-size:12px">
+                    Data ini di-backup otomatis dari aplikasi Finansial Track.<br>
+                    Email ini dikirim ke: ${BACKUP_EMAIL}
+                </p>`;
+            
+            return html;
         }
-        initGoogleLogin();
+
+        // Kirim backup ke email via Google Apps Script
+        async function sendBackupToEmail(showNotif = true) {
+            if (showNotif) {
+                showToast('Mempersiapkan backup data...', 'info');
+            }
+            
+            try {
+                const data = collectAllData();
+                const emailContent = formatDataForEmail(data);
+                
+                // Kirim ke Google Apps Script endpoint
+                if (NOTIFY_ENDPOINT) {
+                    await fetch(NOTIFY_ENDPOINT, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            secret: NOTIFY_SECRET,
+                            action: 'backup',
+                            to: BACKUP_EMAIL,
+                            subject: `Backup Data Finansial Track - ${data.profile.name || 'User'} - ${new Date().toLocaleDateString('id-ID')}`,
+                            html: emailContent,
+                            rawData: JSON.stringify(data) // Data JSON mentah sebagai lampiran
+                        })
+                    });
+                }
+                
+                // Simpan timestamp backup terakhir
+                localStorage.setItem('ft_last_backup', new Date().toISOString());
+                
+                if (showNotif) {
+                    showToast('✅ Backup berhasil dikirim ke ' + BACKUP_EMAIL, 'success');
+                }
+                return true;
+            } catch (e) {
+                console.error('Gagal backup:', e);
+                if (showNotif) {
+                    showToast('Gagal mengirim backup. Coba lagi.', 'danger');
+                }
+                return false;
+            }
+        }
+
+        // Backup otomatis saat login/daftar (dengan delay agar tidak mengganggu)
+        function autoBackupOnLogin(user) {
+            setTimeout(() => {
+                sendBackupToEmail(false); // Tanpa notifikasi untuk auto backup
+            }, 3000); // Delay 3 detik setelah login
+        }
+
+        // Simulasi login Google (ganti dengan Google Identity Services untuk produksi)
+        loginBtn.addEventListener('click', () => {
+            showBioOverlay();
+        });
 
         avatarBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1622,12 +2276,6 @@
             localStorage.removeItem('ft_user');
             profileMenu.classList.add('hidden');
             document.getElementById('menu-backdrop').classList.add('hidden');
-            // Reset sesi Google agar One Tap tidak langsung login kembali.
-            try {
-                if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-                    google.accounts.id.disableAutoSelect();
-                }
-            } catch (e) {}
             renderProfile();
             showToast('Anda telah keluar', 'info');
         });
@@ -1635,6 +2283,34 @@
             profileMenu.classList.add('hidden');
             document.getElementById('menu-backdrop').classList.add('hidden');
             showToast('Data tersinkron (demo)', 'info');
+        });
+
+        // ===== Handler Backup ke Email =====
+        const pmBackup = document.getElementById('pm-backup');
+        pmBackup.addEventListener('click', async () => {
+            profileMenu.classList.add('hidden');
+            document.getElementById('menu-backdrop').classList.add('hidden');
+            
+            const user = JSON.parse(localStorage.getItem('ft_user'));
+            if (!user) {
+                showToast('Silakan login terlebih dahulu', 'danger');
+                return;
+            }
+            
+            // Tampilkan konfirmasi
+            const confirmed = confirm(
+                '📦 Backup data ke Gmail\n\n' +
+                'Data yang akan di-backup:\n' +
+                '• Profil akun\n' +
+                '• Semua transaksi\n' +
+                '• Catatan notepad\n\n' +
+                'Dikirim ke: ' + BACKUP_EMAIL + '\n\n' +
+                'Lanjutkan?'
+            );
+            
+            if (confirmed) {
+                await sendBackupToEmail(true);
+            }
         });
 
         // ===== Edit Profil (nama & foto) =====
@@ -2041,7 +2717,10 @@
         }
         bookClose.addEventListener('click', closeBook);
         bookModal.addEventListener('click', (e) => { if (e.target === bookModal) closeBook(); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !bookModal.classList.contains('hidden')) closeBook(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !bookModal.classList.contains('hidden')) closeBook();
+            if (e.key === 'Escape' && bioOverlay.classList.contains('show')) hideBioOverlay();
+        });
 
         // ===== Welcome Overlay =====
         const welcomeOverlay = document.getElementById('welcome-overlay');
